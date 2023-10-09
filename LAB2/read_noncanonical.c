@@ -101,6 +101,83 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+int llopen(){
+    unsigned char buf_read[2] = {0}; // +1: Save space for the final '\0' char
+    int count=0;
+    while(!STOP){
+        int bytes = read(fd, buf_read, 1);
+        if(bytes!=0){
+            printf("%d bytes read\n", bytes);
+            printf("buffer= %d\n", buf_read[0]);
+        }
+        if(count!=0){
+            printf("count= %d\n",count);
+        }
+        if(count!=4 && buf_read[0]==0x7E){
+            count=1;
+        }
+        else if(count==1){
+            if(buf_read[0]==0x7E){
+                count=1;
+            }
+            else if(buf_read[0]==0x03){
+                count=2;
+            }
+            else count=0;
+
+        }
+        else if(count==2){
+            if(buf_read[0] == 0x7E)
+                count=1;
+            else if(buf_read[0]==0x03){
+                count=3;
+            }
+            else count=0;
+        }
+        else if(count==3){
+            if(buf_read[0] == 0x7E)
+                count=1;
+            else if(buf_read[0]==(0x03 ^ 0x03)){
+                count = 4;
+            }
+            else count=0;
+        }
+        else if(count==4){
+            if(buf_read[0]==0x7E){
+                STOP=TRUE;
+                printf("success");
+            }
+            else{
+                count=0;
+            }
+        }
+
+    }
+
+	if(count!=0){
+		
+		// Create string to send
+		unsigned char buf_write[BUF_SIZE] = {0};
+
+		buf_write[0] = 0x7E;
+		buf_write[1] = 0x03;
+		buf_write[2] = 0x07;
+		buf_write[3] = buf_write[1] ^ buf_write[2];
+		buf_write[4] = 0x7E;
+		
+		// In non-canonical mode, '\n' does not end the writing.
+		// Test this condition by placing a '\n' in the middle of the buffer.
+		// The whole buffer must be sent even with the '\n'.
+		buf_write[5] = '\n';
+
+		int bytes = write(fd, buf_write, BUF_SIZE);
+		printf("%d bytes written\n", bytes);
+
+		// Wait until all bytes have been written to the serial port
+		sleep(1);
+	}
+    return 0;
+}
 
 int llread(){
 
@@ -186,4 +263,132 @@ int llread(){
             sleep(1);
         }
     }
+}
+
+llclose(){
+    int count=0;
+    while(!STOP){
+        int bytes = read(fd, buf_read, 1);
+        if(bytes!=0){
+            printf("%d bytes read\n", bytes);
+            printf("buffer= %d\n", buf_read[0]);
+        }
+        if(count!=0){
+            printf("count= %d\n",count);
+        }
+        if(count!=4 && buf_read[0]==0x7E){
+            count=1;
+        }
+        else if(count==1){
+            if(buf_read[0]==0x7E){
+                count=1;
+            }
+            else if(buf_read[0]==0x03){
+                count=2;
+            }
+            else count=0;
+
+        }
+        else if(count==2){
+            if(buf_read[0] == 0x7E)
+                count=1;
+            else if(buf_read[0]==0x0B){
+                count=3;
+            }
+            else count=0;
+        }
+        else if(count==3){
+            if(buf_read[0] == 0x7E)
+                count=1;
+            else if(buf_read[0]==(0x03 ^ 0x0B)){
+                count = 4;
+            }
+            else count=0;
+        }
+        else if(count==4){
+            if(buf_read[0]==0x7E){
+                STOP=TRUE;
+                printf("success");
+            }
+            else{
+                count=0;
+            }
+        }
+    }
+
+	if(count!=0){
+		
+		// Create string to send
+		unsigned char buf_write[BUF_SIZE] = {0};
+
+		buf_write[0] = 0x7E;
+		buf_write[1] = 0x03;
+		buf_write[2] = 0x0B;
+		buf_write[3] = buf_write[1] ^ buf_write[2];
+		buf_write[4] = 0x7E;
+		
+		// In non-canonical mode, '\n' does not end the writing.
+		// Test this condition by placing a '\n' in the middle of the buffer.
+		// The whole buffer must be sent even with the '\n'.
+		buf_write[5] = '\n';
+
+		
+		printf("%d bytes written\n", bytes);
+
+		// Wait until all bytes have been written to the serial port
+		
+        int bytes = write(fd, buf_write, BUF_SIZE);
+        sleep(1);
+        count=0;
+        STOP=FALSE;
+        while(!STOP){
+            int bytes = read(fd, buf_read, 1);
+            if(bytes!=0){
+                printf("%d bytes read\n", bytes);
+                printf("buffer= %d\n", buf_read[0]);
+            }
+            if(count!=0){
+                printf("count= %d\n",count);
+            }
+            if(count!=4 && buf_read[0]==0x7E){
+                count=1;
+            }
+            else if(count==1){
+                if(buf_read[0]==0x7E){
+                    count=1;
+                }
+                else if(buf_read[0]==0x03){
+                    count=2;
+                }
+                else count=0;
+
+            }
+            else if(count==2){
+                if(buf_read[0] == 0x7E)
+                    count=1;
+                else if(buf_read[0]==0x07){
+                    count=3;
+                }
+                else count=0;
+            }
+            else if(count==3){
+                if(buf_read[0] == 0x7E)
+                    count=1;
+                else if(buf_read[0]==(0x03 ^ 0x07)){
+                    count = 4;
+                }
+                else count=0;
+            }
+            else if(count==4){
+                if(buf_read[0]==0x7E){
+                    STOP=TRUE;
+                    printf("success");
+                }
+                else{
+                    count=0;
+                }
+            }
+        }
+	}
+    return 0;
 }
