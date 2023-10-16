@@ -39,29 +39,35 @@ int llopen(LinkLayer connectionParameters){
 
                 printf("%d bytes written\n", bytes);
 
-                while(!STOP){
+                while(!STOP) {
                     int bytesRead = read(fd, buf_read, 1);
-                    unsigned char byteRead = buf_read[0];
-                    switch(state){ //ESTA POR ACABAR se acabares deixa bonito
-                        case A:
-                            if(byteRead == 0x03) state = C;
-                            break;
-                        case C:
-                            if(byteRead == UA) state = BCC1;
-                            break;
-                        case BCC1:
-                            if(byteRead = (0x03 ^ UA)) state = FINALFLAG;
-                            break;
-                        case FINALFLAG:
-                            if(byteRead == FLAG){
-                                STOP = TRUE;
-                                alarmCount = 5; //??????? tinhas isto mas nao percebo o 5
-                                alarmEnabled = FALSE;
-                                printf("ff read\n");
-                            }
-                            break;
+                    if(state != FIRSTFLAG){
+                        if(bytesRead != 0){
+                            printf("char= 0x%02X | ", buf_read[0]);
+                        }
+                        printf("state= %d\n",state);
                     }
+                    
+                    if (state != FINALFLAG && buf_read[0] == FLAG) {
+                        printf("char= 0x%02X | state= %d\n", buf_read[0],state);
+                        state = A;
+                    }
+                    else if (state == A && buf_read[0] == 0x03) {
+                        state = C;
+                    }
+                    else if (state == C && buf_read[0] == UA) {
+                        state = BCC1;
+                    } else if (state == BCC1 && buf_read[0] == (0x03 ^ UA)) {
+                        state = FINALFLAG;
+                    } else if (state == FINALFLAG && buf_read[0] == FLAG) {
+                        STOP = TRUE;
+                        alarmCount=5;
+                        alarmEnabled=FALSE;
+                        printf("ff read\n");
+                    }
+                    else state = FIRSTFLAG;
                 }
+                nRetransmissions--;
             }
 
             break;
