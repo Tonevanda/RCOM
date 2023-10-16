@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
-
+//
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
 #define BAUDRATE B38400
@@ -20,6 +20,17 @@
 #define FALSE 0
 #define TRUE 1
 
+#define FLAG 0x7E
+#define SET 0x03
+#define UA 0x07
+#define RR0 0x05
+#define RR1 0x85
+#define REJ0 0x01
+#define REJ1 0x81
+#define DISC 0x0B
+#define FRAME0 0x00
+#define FRAME1 0x40
+
 #define BUF_SIZE 256
 
 volatile int STOP = FALSE;
@@ -27,7 +38,253 @@ volatile int STOP = FALSE;
 int alarmEnabled = FALSE;
 int alarmCount = 0;
 
+typedef enum{
+    idk,  //0
+    Fi, //1
+    A,   //2
+    C,   //3
+    BCC1, //4
+    D,  //5
+    BCC2,  //6
+    S,   //7
+    F,  //8
+    FF  //9
+} State;  //expected field
+
 // Alarm function handler
+int llopen(int fd){
+    printf("llopen start\n\n");
+    unsigned char buf_write[BUF_SIZE] = {0};
+    unsigned char buf_read[2] = {0};
+    State state = Fi;
+    //Set up header
+    buf_write[0] = FLAG;
+    buf_write[1] = 0x03;
+    buf_write[2] = SET;
+    buf_write[3] = buf_write[1] ^ buf_write[2];
+    buf_write[4] = FLAG;
+    buf_write[5] = '\n';
+
+    while(alarmCount < 4){
+        int bytes = write(fd, buf_write, BUF_SIZE);
+        if (alarmEnabled == FALSE)
+        {
+            alarm(3); // Set alarm to be triggered in 3s
+            alarmEnabled = TRUE;
+        }
+        printf("%d bytes written\n", bytes);
+        state = Fi;
+        while(!STOP) {
+            int bytes = read(fd, buf_read, 1);
+            if(state != Fi){
+                if(bytes != 0){
+                    printf("char= 0x%02X | ", buf_read[0]);
+                }
+                printf("state= %d\n",state);
+            }
+            
+            if (state != FF && buf_read[0] == FLAG) {
+                printf("char= 0x%02X | state= %d\n", buf_read[0],state);
+                state = A;
+            }
+            else if (state == A && buf_read[0] == 0x03) {
+                state = C;
+            }
+            else if (state == C && buf_read[0] == UA) {
+                state = BCC1;
+            } else if (state == BCC1 && buf_read[0] == (0x03 ^ UA)) {
+                state = FF;
+            } else if (state == FF && buf_read[0] == FLAG) {
+                STOP = TRUE;
+                alarmCount=5;
+                alarmEnabled=FALSE;
+                printf("ff read\n");
+            }
+            else state = Fi;
+        }
+    }
+    alarmCount=0;
+    STOP=FALSE;
+    printf("\n\nllopen success\n\n");
+    return 0;
+}
+
+int llwrite(int fd, unsigned char input[]){
+    printf("llwrite start\n\n");
+    // Create string to send
+    int firstDataByte=0;
+    unsigned char buf_write[BUF_SIZE] = {0};
+    unsigned char buf_read[2] = {0};
+    State state = Fi;
+    //Set up header
+    buf_write[0] = FLAG;
+    buf_write[1] = 0x03;
+
+    buf_write[8] = FLAG;
+    buf_write[9] = '\n';
+
+    unsigned char frame=0x00;
+    while (alarmCount < 4)
+    {
+        buf_write[2] = frame;
+        buf_write[3] = buf_write[1] ^ buf_write[2];
+        buf_write[4] = input[firstDataByte];
+        buf_write[5] = input[firstDataByte+1];
+        buf_write[6] = input[firstDataByte+2];
+        buf_write[7] = buf_write[4] ^ buf_write[5] ^ buf_write[6];
+        int bytes = write(fd, buf_write, BUF_SIZE);
+        printf("%d bytes written\n", bytes);
+        // Wait until all bytes have been written to the serial port
+        sleep(1);
+
+        if (alarmEnabled == FALSE)
+        {
+            alarm(3); // Set alarm to be triggered in 3s
+            alarmEnabled = TRUE;
+        }
+
+        state = Fi;
+        unsigned char c = 0x00;
+        STOP=FALSE;
+        while(!STOP) {
+            int bytes = read(fd, buf_read, 1);
+            if(state != Fi){
+                if(bytes != 0){
+                    printf("char= 0x%02X | ", buf_read[0]);
+                }
+                printf("state= %d\n",state);
+            }
+
+            if (state != FF && buf_read[0] == FLAG) {
+                printf("char= 0x%02X | state= %d\n", buf_read[0],state);
+                state = A;
+            }
+            else if (state == A && buf_read[0] == 0x01) {
+                state = C;
+            }
+            else if (state == C) {
+                if (buf_read[0] == UA) {
+                    state = BCC1;
+                }
+                else if (buf_read[0] == RR0) {
+                    if(frame==FRAME0){
+                        firstDataByte-=3;
+                    }
+                    frame = FRAME0;
+                    state = BCC1;
+                }
+                else if (buf_read[0] == RR1) {
+                    if(frame==FRAME1){
+                        firstDataByte-=3;
+                    }
+                    frame = FRAME1;
+                    state = BCC1;
+                }
+                else if (buf_read[0] == REJ0 || buf_read[0] == REJ1 || buf_read[0] == DISC) {
+                    firstDataByte-=3;
+                    if(frame==FRAME1){
+                        frame=FRAME0;
+                    }
+                    else{
+                        frame=FRAME1;
+                    }
+                    STOP=TRUE;
+                    alarmEnabled=FALSE;
+                    alarmCount=0;
+                }
+                c = buf_read[0];
+            } else if (state == BCC1 && buf_read[0] == (0x01 ^ c)) {
+                state = FF;
+            } else if (state == FF && buf_read[0] == FLAG) {
+                STOP = TRUE;
+                alarmEnabled=FALSE;
+                if(input[firstDataByte+3]!='\n'){
+                    alarmCount=0;
+                    firstDataByte+=3;
+                    printf("one transfer complete");
+                }
+                else{
+                    alarmCount=5;
+                    printf("final transfer complete");
+                }
+            }
+            else state = Fi;
+        }
+    }
+    alarmCount=0;
+    STOP=FALSE;
+    printf("\n\nllwrite success\n\n");
+    return 0;
+}
+
+int llclose(int fd){
+    printf("llclose start\n\n");
+    unsigned char buf_write[BUF_SIZE] = {0};
+    unsigned char buf_read[2] = {0};
+    State state = Fi;
+    //Set up header
+    buf_write[0] = FLAG;
+    buf_write[1] = 0x03;
+    buf_write[2] = DISC;
+    buf_write[3] = buf_write[1] ^ buf_write[2];
+    buf_write[4] = FLAG;
+    buf_write[5] = '\n';
+    int bytes = write(fd, buf_write, BUF_SIZE);
+    sleep(1);
+    printf("%d bytes written | ", bytes);
+    while(alarmCount < 4){
+        state = Fi;
+        while(!STOP) {
+            int bytes = read(fd, buf_read, 1);
+            if(state != Fi){
+                if(bytes != 0){
+                    printf("char= 0x%02X\n", buf_read[0]);
+                }
+                printf("state= %d\n",state);
+            }
+
+            if (state != FF && buf_read[0] == FLAG) {
+                printf("char= 0x%02X | state= %d\n", buf_read[0],state);
+                state = A;
+            }
+            else if (state == A && buf_read[0] == 0x01) {
+                state = C;
+            }
+            else if (state == C && buf_read[0] == DISC) {
+                state = BCC1;
+            } 
+            else if (state == BCC1 && buf_read[0] == (0x01 ^ DISC)) {
+                state = FF;
+            } 
+            else if (state == FF && buf_read[0] == FLAG) {
+                STOP = TRUE;
+                alarmCount=5;
+                alarmEnabled=FALSE;
+                printf("success");
+                state=S;
+            }
+            else state = Fi;
+        }
+        if (state!=S){
+            bytes = write(fd, buf_write, BUF_SIZE);
+            printf("resent disc\n");
+            if (alarmEnabled == FALSE)
+            {
+                alarm(3); // Set alarm to be triggered in 3s
+                alarmEnabled = TRUE;
+            }
+        }
+    }
+    buf_write[1] = 0x01;
+    buf_write[2] = UA;
+    buf_write[3] = buf_write[1] ^ buf_write[2];
+    bytes = write(fd, buf_write, BUF_SIZE);
+    alarmCount=0;
+    STOP=FALSE;
+    printf("\n\nllclose success\n\n");
+    return 0;
+}
+
 void alarmHandler(int signal)
 {
     alarmEnabled = FALSE;
@@ -104,7 +361,7 @@ int main(int argc, char *argv[])
     // Set alarm function handler
     (void)signal(SIGALRM, alarmHandler);
 
-    llopen();
+    llopen(fd);
 
     unsigned char input[BUF_SIZE];
     input[0] = 0x6F;
@@ -117,9 +374,10 @@ int main(int argc, char *argv[])
     input[7] = 0x69;
     input[8] = 0x69;
     input[9] = '\n';
-    llwrite(input);
+    llwrite(fd,input);
 
-    llclose();
+    llclose(fd);
+
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {
@@ -132,254 +390,3 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-int llopen(){
-    unsigned char buf_write[BUF_SIZE] = {0};
-    unsigned char buf_read[2] = {0};
-    //Set up header
-    buf_write[0] = 0x7E;
-    buf_write[1] = 0x03;
-    buf_write[2] = 0x03;
-    buf_write[3] = buf_write[1] ^ buf_write[2];
-    buf_write[4] = 0x7E;
-    buf_write[5] = '\n';
-    while(alarmCount < 4){
-        int bytes = write(fd, buf_write, BUF_SIZE);
-        if (alarmEnabled == FALSE)
-        {
-            alarm(3); // Set alarm to be triggered in 3s
-            alarmEnabled = TRUE;
-        }
-        printf("%d bytes written\n", bytes);
-        while(!STOP) {
-            int bytes = read(fd, buf_read, 1);
-            if (bytes != 0) {
-                printf("%d bytes read\n", bytes);
-                printf("buffer= %d\n", buf_read[0]);
-            }
-            if (count != 0) {
-                printf("count= %d\n", count);
-            }
-            if (count != 4 && buf_read[0] == 0x7E) {
-                count = 1;
-            }
-            else if (count == 1) {
-                if (buf_read[0] == 0x7E) {
-                    count = 1;
-                }
-                else if (buf_read[0] == 0x03) {
-                    count = 2;
-                }
-                else count = 0;
-            }
-            else if (count == 2) {
-                if (buf_read[0] == 0x7E)
-                    count = 1;
-                else if (buf_read[0] == 0x07) {
-                    count = 3;
-                }
-                else count = 0;
-            } else if (count == 3) {
-                if (buf_read[0] == 0x7E)
-                    count = 1;
-                else if (buf_read[0] == (0x03 ^ 0x07)) {
-                    count = 4;
-                } else count = 0;
-            } else if (count == 4) {
-                if (buf_read[0] == 0x7E) {
-                    STOP = TRUE;
-                    alarmCount=5;
-                    alarmEnabled=FALSE;
-                    printf("success");
-                }
-                else {
-                    count = 0;
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-int llwrite(unsigned char input[]){
-    // Create string to send
-    int firstFlagIndex=0;
-    unsigned char buf_write[BUF_SIZE] = {0};
-
-    //Set up header
-    buf_write[0] = 0x7E;
-    buf_write[1] = 0x03;
-    buf_write[8] = 0x7E;
-    buf_write[9] = '\n';
-
-    unsigned char frame=0x00;
-    while (alarmCount < 4)
-    {
-        buf_write[2] = frame;
-        buf_write[3] = buf_write[1] ^ buf_write[2];
-        buf_write[4]=input[firstFlagIndex];
-        buf_write[5]=input[firstFlagIndex+1];
-        buf_write[6]=input[firstFlagIndex+2];
-        buf_write[7] = buf_write[4] ^ buf_write[5] ^ buf_write[6];
-        int bytes = write(fd, buf_write, BUF_SIZE);
-        if (alarmEnabled == FALSE)
-        {
-            alarm(3); // Set alarm to be triggered in 3s
-            alarmEnabled = TRUE;
-        }
-        printf("%d bytes written\n", bytes);
-
-        // Wait until all bytes have been written to the serial port
-        sleep(1);
-
-        unsigned char buf_read[2] = {0}; // +1: Save space for the final '\0' char
-        // Returns after 5 chars have been input
-        int count=0;
-        while(!STOP) {
-            int bytes = read(fd, buf_read, 1);
-            if (bytes != 0) {
-                printf("%d bytes read\n", bytes);
-                printf("buffer= %d\n", buf_read[0]);
-            }
-            if (count != 0) {
-                printf("count= %d\n", count);
-            }
-            if (count != 4 && buf_read[0] == 0x7E) {
-                count = 1;
-            }
-            unsigned char C;
-            else if (count == 1) {
-                if (buf_read[0] == 0x7E) {
-                    count = 1;
-                }
-                else if (buf_read[0] == 0x03) {
-                    count = 2;
-                }
-                else ifs()
-                else count = 0;
-            }
-            else if (count == 2) {
-                if (buf_read[0] == 0x7E)
-                    count = 1;
-                //UA
-                else if (buf_read[0] == 0x07) {
-                    count = 3;
-                }
-                //RR0
-                else if (buf_read[0] == 0x05) {
-                    count = 3;
-                    frame=0x00;
-                }
-                //RR1
-                else if (buf_read[0] == 0x85) {
-                    count = 3;
-                    frame=0x40
-                }
-                //REJ0 or REJ1                                                      !PERGUNTA À STORA
-                else if (buf_read[0] == 0x01 || buf_read[0] == 0x81) {
-                    count = 0;
-                }
-                //DISC
-                else if (buf_read[0] == 0x0B) {
-                    //state disc
-                    printf("disc");
-                }
-                else count = 0;
-                C=buf_read[0];
-            } else if (count == 3) {
-                if (buf_read[0] == 0x7E)
-                    count = 1;
-                else if (buf_read[0] == (0x03 ^ C)) {
-                    count = 4;
-                } else count = 0;
-            } else if (count == 4) {
-                if (buf_read[0] == 0x7E) {
-                    STOP = TRUE;
-                    alarmEnabled=FALSE;
-                    if(input[firstFlagIndex+4]=='\n'){
-                        alarmCount=5;
-                    }
-                    else{
-                        alarmCount=0;
-                        firstFlagIndex+=3;
-                    }
-                    printf("one transfer complete");
-                }
-                else {
-                    count = 0;
-                }
-            }
-        }
-    }
-
-}
-
-int llclose(){
-    unsigned char buf_write[BUF_SIZE] = {0};
-    unsigned char buf_read[2] = {0};
-    //Set up header
-    buf_write[0] = 0x7E;
-    buf_write[1] = 0x03;
-    buf_write[2] = 0x0B;
-    buf_write[3] = buf_write[1] ^ buf_write[2];
-    buf_write[4] = 0x7E;
-    buf_write[5] = '\n';
-    while(alarmCount < 4){
-        int bytes = write(fd, buf_write, BUF_SIZE);
-        if (alarmEnabled == FALSE)
-        {
-            alarm(3); // Set alarm to be triggered in 3s
-            alarmEnabled = TRUE;
-        }
-        printf("%d bytes written\n", bytes);
-        while(!STOP) {
-            int bytes = read(fd, buf_read, 1);
-            if (bytes != 0) {
-                printf("%d bytes read\n", bytes);
-                printf("buffer= %d\n", buf_read[0]);
-            }
-            if (count != 0) {
-                printf("count= %d\n", count);
-            }
-            if (count != 4 && buf_read[0] == 0x7E) {
-                count = 1;
-            }
-            else if (count == 1) {
-                if (buf_read[0] == 0x7E) {
-                    count = 1;
-                }
-                else if (buf_read[0] == 0x03) {
-                    count = 2;
-                }
-                else count = 0;
-            }
-            else if (count == 2) {
-                if (buf_read[0] == 0x7E)
-                    count = 1;
-                else if (buf_read[0] == 0x0B) {
-                    count = 3;
-                }
-                else count = 0;
-            } else if (count == 3) {
-                if (buf_read[0] == 0x7E)
-                    count = 1;
-                else if (buf_read[0] == (0x03 ^ 0x0B)) {
-                    count = 4;
-                } else count = 0;
-            } else if (count == 4) {
-                if (buf_read[0] == 0x7E) {
-                    STOP = TRUE;
-                    alarmCount=5;
-                    alarmEnabled=FALSE;
-                    printf("success");
-                }
-                else {
-                    count = 0;
-                }
-            }
-        }
-    }
-    buf_write[2] = 0x07;
-    buf_write[3] = buf_write[1] ^ buf_write[2];
-    int bytes = write(fd, buf_write, BUF_SIZE);
-    return 0;
-}
