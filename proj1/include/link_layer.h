@@ -30,15 +30,15 @@ typedef struct
 
 typedef enum{
     DISCONNECTING,  //0
-    FIRSTFLAG, //1
-    A,   //2
-    C,   //3
-    BCC1, //4
-    DATA,  //5
-    BCC2,  //6
-    SUCESS,   //7
-    FAILURE,  //8
-    FINALFLAG  //9
+    FIRSTFLAG,      //1
+    A,              //2
+    C,              //3
+    BCC1,           //4
+    DATA,           //5
+    BCC2,           //6
+    SUCCESS,        //7
+    FAILURE,        //8
+    FINALFLAG       //9
 } State; //expected field
 
 // SIZE of maximum acceptable payload.
@@ -92,6 +92,6 @@ int alarmHandler(int signal);
 
 // Writes the supervision frame to the receiver
 // Returns number of bytes written
-int writeSupervisionFrame(int fd, unsigned char A, unsigned char C);
+int writeSupervisionFrame(unsigned char A, unsigned char C);
 
 #endif // _LINK_LAYER_H_
