@@ -39,24 +39,24 @@ int alarmEnabled = FALSE;
 int alarmCount = 0;
 
 typedef enum{
-    idk,  //0
-    Fi, //1
+    DISCONNECTING,  //0
+    FIRSTFLAG, //1
     A,   //2
     C,   //3
     BCC1, //4
-    D,  //5
+    DATA,  //5
     BCC2,  //6
-    S,   //7
-    F,  //8
-    FF  //9
-} State;  //expected field
+    SUCCESS,   //7
+    FAILURE,  //8
+    FINALFLAG  //9
+} State; //expected field
 
 // Alarm function handler
 int llopen(int fd){
     printf("llopen start\n\n");
     unsigned char buf_write[BUF_SIZE] = {0};
     unsigned char buf_read[2] = {0};
-    State state = Fi;
+    State state = FIRSTFLAG;
     //Set up header
     buf_write[0] = FLAG;
     buf_write[1] = 0x03;
@@ -66,24 +66,24 @@ int llopen(int fd){
     buf_write[5] = '\n';
 
     while(alarmCount < 4){
-        int bytes = write(fd, buf_write, BUF_SIZE);
+        int bytesWritten = write(fd, buf_write, BUF_SIZE);
         if (alarmEnabled == FALSE)
         {
             alarm(3); // Set alarm to be triggered in 3s
             alarmEnabled = TRUE;
         }
-        printf("%d bytes written\n", bytes);
-        state = Fi;
+        printf("%d bytes written\n", bytesWritten);
+        state = FIRSTFLAG;
         while(!STOP) {
-            int bytes = read(fd, buf_read, 1);
-            if(state != Fi){
-                if(bytes != 0){
+            int bytesRead = read(fd, buf_read, 1);
+            if(state != FIRSTFLAG){
+                if(bytesRead != 0){
                     printf("char= 0x%02X | ", buf_read[0]);
                 }
                 printf("state= %d\n",state);
             }
             
-            if (state != FF && buf_read[0] == FLAG) {
+            if (state != FINALFLAG && buf_read[0] == FLAG) {
                 printf("char= 0x%02X | state= %d\n", buf_read[0],state);
                 state = A;
             }
@@ -93,14 +93,14 @@ int llopen(int fd){
             else if (state == C && buf_read[0] == UA) {
                 state = BCC1;
             } else if (state == BCC1 && buf_read[0] == (0x03 ^ UA)) {
-                state = FF;
-            } else if (state == FF && buf_read[0] == FLAG) {
+                state = FINALFLAG;
+            } else if (state == FINALFLAG && buf_read[0] == FLAG) {
                 STOP = TRUE;
                 alarmCount=5;
                 alarmEnabled=FALSE;
                 printf("ff read\n");
             }
-            else state = Fi;
+            else state = FIRSTFLAG;
         }
     }
     alarmCount=0;
@@ -115,7 +115,7 @@ int llwrite(int fd, unsigned char input[]){
     int firstDataByte=0;
     unsigned char buf_write[BUF_SIZE] = {0};
     unsigned char buf_read[2] = {0};
-    State state = Fi;
+    State state = FIRSTFLAG;
     //Set up header
     buf_write[0] = FLAG;
     buf_write[1] = 0x03;
@@ -143,19 +143,19 @@ int llwrite(int fd, unsigned char input[]){
             alarmEnabled = TRUE;
         }
 
-        state = Fi;
+        state = FIRSTFLAG;
         unsigned char c = 0x00;
         STOP=FALSE;
         while(!STOP) {
             int bytes = read(fd, buf_read, 1);
-            if(state != Fi){
+            if(state != FIRSTFLAG){
                 if(bytes != 0){
                     printf("char= 0x%02X | ", buf_read[0]);
                 }
                 printf("state= %d\n",state);
             }
 
-            if (state != FF && buf_read[0] == FLAG) {
+            if (state != FINALFLAG && buf_read[0] == FLAG) {
                 printf("char= 0x%02X | state= %d\n", buf_read[0],state);
                 state = A;
             }
@@ -194,8 +194,8 @@ int llwrite(int fd, unsigned char input[]){
                 }
                 c = buf_read[0];
             } else if (state == BCC1 && buf_read[0] == (0x01 ^ c)) {
-                state = FF;
-            } else if (state == FF && buf_read[0] == FLAG) {
+                state = FINALFLAG;
+            } else if (state == FINALFLAG && buf_read[0] == FLAG) {
                 STOP = TRUE;
                 alarmEnabled=FALSE;
                 if(input[firstDataByte+3]!='\n'){
@@ -208,7 +208,7 @@ int llwrite(int fd, unsigned char input[]){
                     printf("final transfer complete");
                 }
             }
-            else state = Fi;
+            else state = FIRSTFLAG;
         }
     }
     alarmCount=0;
@@ -221,7 +221,7 @@ int llclose(int fd){
     printf("llclose start\n\n");
     unsigned char buf_write[BUF_SIZE] = {0};
     unsigned char buf_read[2] = {0};
-    State state = Fi;
+    State state = FIRSTFLAG;
     //Set up header
     buf_write[0] = FLAG;
     buf_write[1] = 0x03;
@@ -233,17 +233,17 @@ int llclose(int fd){
     sleep(1);
     printf("%d bytes written | ", bytes);
     while(alarmCount < 4){
-        state = Fi;
+        state = FIRSTFLAG;
         while(!STOP) {
             int bytes = read(fd, buf_read, 1);
-            if(state != Fi){
+            if(state != FIRSTFLAG){
                 if(bytes != 0){
                     printf("char= 0x%02X\n", buf_read[0]);
                 }
                 printf("state= %d\n",state);
             }
 
-            if (state != FF && buf_read[0] == FLAG) {
+            if (state != FINALFLAG && buf_read[0] == FLAG) {
                 printf("char= 0x%02X | state= %d\n", buf_read[0],state);
                 state = A;
             }
@@ -254,18 +254,18 @@ int llclose(int fd){
                 state = BCC1;
             } 
             else if (state == BCC1 && buf_read[0] == (0x01 ^ DISC)) {
-                state = FF;
+                state = FINALFLAG;
             } 
-            else if (state == FF && buf_read[0] == FLAG) {
+            else if (state == FINALFLAG && buf_read[0] == FLAG) {
                 STOP = TRUE;
                 alarmCount=5;
                 alarmEnabled=FALSE;
                 printf("success");
-                state=S;
+                state=SUCCESS;
             }
-            else state = Fi;
+            else state = FIRSTFLAG;
         }
-        if (state!=S){
+        if (state!=SUCCESS){
             bytes = write(fd, buf_write, BUF_SIZE);
             printf("resent disc\n");
             if (alarmEnabled == FALSE)

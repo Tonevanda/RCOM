@@ -35,33 +35,33 @@
 volatile int STOP = FALSE;
 
 typedef enum{
-    Disc,  //0
-    Fi, //1
+    DISCONNECTING,  //0
+    FIRSTFLAG, //1
     A,   //2
     C,   //3
     BCC1, //4
-    D,  //5
+    DATA,  //5
     BCC2,  //6
-    S,   //7
-    F,  //8
-    FF  //9
+    SUCCESS,   //7
+    FAILURE,  //8
+    FINALFLAG  //9
 } State; //expected field
 
 
 int llopen(int fd){
     printf("llopen start\n\n");
     unsigned char buf_read[2] = {0};
-    State state = Fi;
+    State state = FIRSTFLAG;
     while(!STOP){
         int bytes = read(fd, buf_read, 1);
-        if(state != Fi){
+        if(state != FIRSTFLAG){
             if(bytes != 0){
                 printf("char= 0x%02X | ", buf_read[0]);
             }
             printf("state= %d\n",state);
         }
         
-        if(state != FF && buf_read[0]==FLAG){
+        if(state != FINALFLAG && buf_read[0]==FLAG){
             printf("char= 0x%02X | state= %d\n", buf_read[0],state);
             state = A;
         }
@@ -72,13 +72,13 @@ int llopen(int fd){
             state = BCC1;
         }
         else if(state == BCC1 && buf_read[0]==(0x03 ^ SET)){
-            state = FF;
+            state = FINALFLAG;
         }
-        else if(state == FF && buf_read[0] == FLAG){
+        else if(state == FINALFLAG && buf_read[0] == FLAG){
             STOP=TRUE;
             printf("success");
         }
-        else state = Fi;
+        else state = FIRSTFLAG;
     }
 
     // Create string to send
@@ -105,19 +105,19 @@ int llread(int fd,unsigned char output[BUF_SIZE]){
     int responseFrame=0;
     int firstDataByte=0;
     unsigned char frame=0x00;
-    State state = Fi;
-    while (state != Disc){
+    State state = FIRSTFLAG;
+    while (state != DISCONNECTING){
         unsigned char buf_read[2] = {0}; 
-        state = Fi;
+        state = FIRSTFLAG;
         while(!STOP){
             int bytes = read(fd, buf_read, 1);
-            if(state != Fi && state != F){
+            if(state != FIRSTFLAG && state != FAILURE){
                 if(bytes != 0){
                     printf("char= 0x%02X | ", buf_read[0]);
                 }
                 printf("state= %d\n",state);
             }
-            if(state!=FF && buf_read[0] == FLAG){
+            if(state!=FINALFLAG && buf_read[0] == FLAG){
                 printf("char= 0x%02X | state= %d\n", buf_read[0],state);
                 state = A;
             }
@@ -143,14 +143,14 @@ int llread(int fd,unsigned char output[BUF_SIZE]){
             }
             else if(state == BCC1 && buf_read[0]==(0x03 ^ frame)){
                 if(frame == DISC){
-                    state = FF;
+                    state = FINALFLAG;
                 }
                 else{
-                    state = D;
+                    state = DATA;
                 }
             }
-            //wip D state
-            else if(state == D){
+            //wip DATA state
+            else if(state == DATA){
                 printf("\ndata\n");
                 output[firstDataByte]=buf_read[0];
                 firstDataByte++;
@@ -160,31 +160,31 @@ int llread(int fd,unsigned char output[BUF_SIZE]){
             }
             else if(state == BCC2){
                 if(buf_read[0] == (output[firstDataByte-3] ^ output[firstDataByte-2] ^ output[firstDataByte-1]))
-                    state = FF;
+                    state = FINALFLAG;
                 else{
-                    state = F;
+                    state = FAILURE;
                     firstDataByte-=3;
                 }
             }
-            else if(state == FF){
+            else if(state == FINALFLAG){
                 if(buf_read[0] == FLAG){
                     STOP=TRUE;
                     printf("success");
-                    state = S;
+                    state = SUCCESS;
                 }
                 else{
-                    state = F;
+                    state = FAILURE;
                     firstDataByte-=3;
                 }
                 if(frame == DISC){
                     printf("\n\n\nsucses in disconecting\n");
-                    state = Disc;
+                    state = DISCONNECTING;
                 }
             }
-            else state = F;
+            else state = FAILURE;
         }
 
-        if(state==S){
+        if(state==SUCCESS){
             printf("sucsess frame sent\n");
             // Create string to send
             unsigned char buf_write[BUF_SIZE] = {0};
@@ -201,7 +201,7 @@ int llread(int fd,unsigned char output[BUF_SIZE]){
             // Wait until all bytes have been written to the serial port
             sleep(1);
         }
-        else if (state==F) {
+        else if (state==FAILURE) {
             printf("failure frame sent\n");
             // Create string to send
             unsigned char buf_write[BUF_SIZE] = {0};
@@ -232,7 +232,7 @@ int llread(int fd,unsigned char output[BUF_SIZE]){
 
 int llclose(int fd){
     printf("llclose start\n\n");
-    State state = Fi;
+    State state = FIRSTFLAG;
     unsigned char buf_read[2] = {0};
     unsigned char buf_write[BUF_SIZE] = {0};
     unsigned char a=0x00;
@@ -246,14 +246,14 @@ int llclose(int fd){
     int bytes = write(fd, buf_write, BUF_SIZE);
     while(!STOP){
         int bytes = read(fd, buf_read, 1);
-        if(state != Fi){
+        if(state != FIRSTFLAG){
             if(bytes != 0){
                 printf("char= 0x%02X | ", buf_read[0]);
             }
             printf("state= %d\n",state);
         }
 
-        if(state != FF && buf_read[0] == FLAG){
+        if(state != FINALFLAG && buf_read[0] == FLAG){
             printf("char= 0x%02X | state= %d\n", buf_read[0],state);
             state = A;
         }
@@ -266,22 +266,22 @@ int llclose(int fd){
                 c=buf_read[0];
                 state = BCC1;
             }
-            else state = Fi;
+            else state = FIRSTFLAG;
         }
         else if(state == BCC1 && buf_read[0]==(a ^ c)){
-            state = FF;
+            state = FINALFLAG;
         }
-        else if(state == FF && buf_read[0] == FLAG){
+        else if(state == FINALFLAG && buf_read[0] == FLAG){
             if(c==UA){
                 STOP=TRUE;
                 printf("success");
             }
             else{
                 int bytes = write(fd, buf_write, BUF_SIZE);
-                state=Fi;
+                state=FIRSTFLAG;
             }
         }
-        else state = Fi;
+        else state = FIRSTFLAG;
     }
 
     STOP=FALSE;

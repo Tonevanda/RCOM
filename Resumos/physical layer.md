@@ -120,3 +120,8 @@ Por estas razões ondas rádio são muito utilizadas para comunicação tanto in
 Podemos calcular a força do sinal de uma onda rádio através desta fórmula:
 
 ![signal power](docs/signalpower.png)
+
+
+## The Fourier Transform
+
+Fourier descobriu que qualquer função **periódica** pode ser reescrita como uma soma pesada de **senos** e **cossenos** de diferentes frequências.
