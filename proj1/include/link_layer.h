@@ -88,7 +88,7 @@ int llclose(int showStatistics);
 // Returns fd if successful or -1 in case of error
 int connect(const char *serialPort);
 
-int alarmHandler(int signal);
+void alarmHandler(int signal);
 
 // Writes the supervision frame to the receiver
 // Returns number of bytes written
