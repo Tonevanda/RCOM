@@ -8,6 +8,7 @@ int alarmEnabled = FALSE;
 int alarmCount = 0;
 int alarmTimeout = 0;
 int nRetransmissions = 0;
+unsigned char frame=0x00;
 int fd;
 LinkLayer connectionParam;
 
@@ -16,8 +17,8 @@ LinkLayer connectionParam;
 // LLOPEN
 ////////////////////////////////////////////////
 int llopen(LinkLayer connectionParameters){
-    connectionParam = connectionParameters;
     printf("llopen start\n\n");
+    connectionParam = connectionParameters;
     fd = connect(connectionParameters.serialPort);
     if(fd < 0) return -1;
     State state = FIRSTFLAG;
@@ -106,7 +107,8 @@ int llopen(LinkLayer connectionParameters){
         }
 
     }
-
+    alarmEnabled=FALSE;
+    alarm(0);
     nRetransmissions = connectionParameters.nRetransmissions;
     STOP = FALSE;
     printf("\n\nllopen success\n\n");
@@ -116,41 +118,60 @@ int llopen(LinkLayer connectionParameters){
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
-int llwrite(const unsigned char *buf, int bufSize)
-{
-    unsigned char input[BUF_SIZE];
-    input[0] = 0x6F;
-    input[1] = 0x69;
-    input[2] = 0x20;
-    input[3] = 0x6A;
-    input[4] = 0x6F;
-    input[5] = 0x6D;
-    input[6] = 0x69;
-    input[7] = 0x69;
-    input[8] = 0x69;
-    input[9] = '\n';
+int llwrite(const unsigned char *buf, int bufSize){
+    
     printf("llwrite start\n\n");
-    int firstDataByte=0;
-    unsigned char buf_write[BUF_SIZE] = {0};
+    unsigned char* buf_write = (unsigned char*) malloc((bufSize*2)+8);
+    buf_write[0] = FLAG;
+    buf_write[1] = 0x03;
+    buf_write[2] = frame;
+    buf_write[3] = buf_write[1] ^ buf_write[2];
+    int offset=4;
+    unsigned char tmp=0x00;
+    for(int i=0;i<bufSize;i++){
+        
+        if(buf[i]==0x7E){
+            buf_write[i+offset]=0x7D;
+            offset++;
+            buf_write[i+offset]=0x5E;
+        }
+        else if (buf[i]==0x7D)
+        {
+            buf_write[i+offset]=0x7D;
+            offset++;
+            buf_write[i+offset]=0x5D;
+        }
+        else{
+            buf_write[i+offset]=buf[i];
+        } 
+        tmp^=buf[i];
+    }
     unsigned char buf_read[2] = {0};
     State state = FIRSTFLAG;
     //Set up header
-    buf_write[0] = FLAG;
-    buf_write[1] = 0x03;
-
-    buf_write[8] = FLAG;
-    buf_write[9] = '\n';
-
-    unsigned char frame=0x00;
-    while (nRetransmissions > 0)
+    printf("tmp= 0x%02X\n", tmp);
+    if(tmp==0x7E){
+        buf_write[bufSize+offset] = 0x7D;
+        offset++;
+        buf_write[bufSize+offset] = 0x5E;
+    }
+    else if (tmp==0x7D)
     {
-        buf_write[2] = frame;
-        buf_write[3] = buf_write[1] ^ buf_write[2];
-        buf_write[4] = input[firstDataByte];
-        buf_write[5] = input[firstDataByte+1];
-        buf_write[6] = input[firstDataByte+2];
-        buf_write[7] = buf_write[4] ^ buf_write[5] ^ buf_write[6];
-        int bytes = write(fd, buf_write, BUF_SIZE);
+        buf_write[bufSize+offset] = 0x7D;
+        offset++;
+        buf_write[bufSize+offset] = 0x5D;
+    }
+    else{
+        buf_write[bufSize+offset] = tmp;
+    }
+    sleep(1);
+    offset++;
+    buf_write[bufSize+offset] = FLAG;
+    offset++;
+    buf_write[bufSize+offset] = '\n';
+    while (nRetransmissions > 0)
+    { 
+        int bytes = write(fd, buf_write, bufSize+offset);
         printf("%d bytes written\n", bytes);
         // Wait until all bytes have been written to the serial port
         sleep(1);
@@ -186,20 +207,21 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 else if (buf_read[0] == RR0) {
                     if(frame==FRAME0){
-                        firstDataByte-=3;
+                        STOP=TRUE;
+                        alarmEnabled=FALSE;
                     }
                     frame = FRAME0;
                     state = BCC1;
                 }
                 else if (buf_read[0] == RR1) {
                     if(frame==FRAME1){
-                        firstDataByte-=3;
+                        STOP=TRUE;
+                        alarmEnabled=FALSE;
                     }
                     frame = FRAME1;
                     state = BCC1;
                 }
                 else if (buf_read[0] == REJ0 || buf_read[0] == REJ1 || buf_read[0] == DISC) {
-                    firstDataByte-=3;
                     if(frame==FRAME1){
                         frame=FRAME0;
                     }
@@ -216,20 +238,15 @@ int llwrite(const unsigned char *buf, int bufSize)
             } else if (state == FINALFLAG && buf_read[0] == FLAG) {
                 STOP = TRUE;
                 alarmEnabled=FALSE;
-                if(input[firstDataByte+3]!='\n'){
-                    nRetransmissions = connectionParam.nRetransmissions;
-                    firstDataByte+=3;
-                    printf("one transfer complete");
-                }
-                else{
-                    nRetransmissions=-1;
-                    printf("final transfer complete");
-                }
+                nRetransmissions=-1;
+                printf("final transfer complete");
             }
             else state = FIRSTFLAG;
         }
     }
     nRetransmissions = connectionParam.nRetransmissions;
+    alarmEnabled=FALSE;
+    alarm(0);
     STOP=FALSE;
     printf("\n\nllwrite success\n\n");
     return 0;
@@ -238,120 +255,144 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 // LLREAD
 ////////////////////////////////////////////////
-int llread(unsigned char *packet)
+int llread(unsigned char *output,int* bufSize)
 {
     printf("llread start\n\n");
     int responseFrame=0;
-    int firstDataByte=0;
-    unsigned char frame=0x00;
     unsigned char buf_read[2] = {0};
-    unsigned char output[BUF_SIZE]={0};
+    
+    int firstDataByte=0;
     State state = FIRSTFLAG;
-    while (state != DISCONNECTING){
-        state = FIRSTFLAG;
-        while(!STOP){
-            int bytes = read(fd, buf_read, 1);
-            printf("test char= 0x%02X | state= %d\n", buf_read[0],state);
-            if(state != FIRSTFLAG && state != FAILURE){
-                if(bytes != 0){
+    unsigned char tmp=0x00;
+    unsigned char tmpframe=0x00;
+    firstDataByte=0;
+    state = FIRSTFLAG;
+    while(!STOP){
+        int bytesRead = read(fd, buf_read, 1);
+        if(state != FIRSTFLAG){
+                if(bytesRead != 0){
                     printf("char= 0x%02X | ", buf_read[0]);
+                    printf("state= %d\n",state);
                 }
-                printf("state= %d\n",state);
             }
-            if(state!=FINALFLAG && buf_read[0] == FLAG){
-                printf("char= 0x%02X | state= %d\n", buf_read[0],state);
-                state = A;
-            }
-            else if(state==FIRSTFLAG){
-                state = FIRSTFLAG;
-            }
-            else if(state == A && buf_read[0]==0x03){
-                state = C;
-            }
-            else if(state == C){
-                //wip frame
-                if(buf_read[0]==FRAME0){
-                    if(responseFrame == RR1){
-                        firstDataByte-=3;
-                    }
+        if(state!=DATA && state!=FINALFLAG && buf_read[0] == FLAG){
+            state = A;
+        }
+        else if(state==FIRSTFLAG){
+            state = FIRSTFLAG;
+        }
+        else if(state == A && buf_read[0]==0x03){
+            state = C;
+        }
+        else if(state == C){
+            //wip frame
+            if(buf_read[0]==frame){
+                if(frame==FRAME0){
                     responseFrame = RR1;
                 }
-                else if(buf_read[0]==FRAME1){
-                    if(responseFrame == RR0){
-                        firstDataByte-=3;
-                    }
+                else{
                     responseFrame = RR0;
                 }
                 state=BCC1;
-                frame=buf_read[0];
+                tmpframe=buf_read[0];
             }
-            else if(state == BCC1 && buf_read[0]==(0x03 ^ frame)){
-                if(frame == DISC){
-                    state = FINALFLAG;
+            else if(buf_read[0]==FRAME0 || buf_read[0]==FRAME1){
+                if(buf_read[0]==FRAME0){
+                    responseFrame = REJ0;
                 }
                 else{
-                    state = DATA;
+                    responseFrame = REJ1;
                 }
-            }
-                //wip DATA state
-            else if(state == DATA){
-                printf("\ndata\n");
-                output[firstDataByte]=buf_read[0];
-                firstDataByte++;
-                if(firstDataByte % 3 == 0) {
-                    state = BCC2;
-                }
-            }
-            else if(state == BCC2){
-                if(buf_read[0] == (output[firstDataByte-3] ^ output[firstDataByte-2] ^ output[firstDataByte-1]))
-                    state = FINALFLAG;
-                else{
-                    state = FAILURE;
-                    firstDataByte-=3;
-                }
-            }
-            else if(state == FINALFLAG) {
-                if (buf_read[0] == FLAG) {
-                    STOP = TRUE;
-                    printf("success");
-                    state = SUCCESS;
-                } else {
-                    state = FAILURE;
-                    firstDataByte -= 3;
-                }
-                if (frame == DISC) {
-                    printf("\n\n\nsuccess in disconecting\n");
-                    state = DISCONNECTING;
-                }
-            }
-            else if (state==FAILURE){
                 STOP=TRUE;
-            }
-            else state = FAILURE;
-        }
-
-        if(state==SUCCESS){
-            printf("sucsess frame sent\n");
-
-            writeSupervisionFrame(0x01, responseFrame);
-
-            STOP=FALSE;
-        }
-        else if (state==FAILURE) {
-            printf("failure frame sent\n");
-            if(responseFrame==RR0){
-                responseFrame=REJ1;
+                state=FAILURE;
             }
             else{
-                responseFrame=REJ0;
+                state=BCC1;
+                tmpframe=buf_read[0];
             }
-            writeSupervisionFrame(0x01, responseFrame);
-            STOP=FALSE;
         }
+        else if(state == BCC1 && buf_read[0]==(0x03 ^ tmpframe)){
+            if(frame == DISC){
+                state = FINALFLAG;
+            }
+            else{
+                state = DATA;
+            }
+        }
+        else if(state == DATA){
+            if(firstDataByte!=0 && buf_read[0]==0x5E && output[firstDataByte-1]==0x7D){
+                output[firstDataByte-1]=0x7E;
+                tmp ^= output[firstDataByte-2];
+            }
+            else if(firstDataByte!=0 && buf_read[0]==0x5D && output[firstDataByte-1]==0x7D){
+                output[firstDataByte-1]=0x7D;
+                tmp ^= output[firstDataByte-2];
+            }
+            else{
+                output[firstDataByte]=buf_read[0];
+                if(firstDataByte>1){
+                    if(output[firstDataByte-1]!=0x7E && output[firstDataByte-1]!=0x7D){
+                        tmp ^= output[firstDataByte-2];
+                    }
+                }
+                if(buf_read[0] != FLAG) {
+                    firstDataByte++;
+                }
+            }
+            if(buf_read[0] == FLAG) {
+                if(tmp==output[firstDataByte-1]){
+                    STOP = TRUE;
+                    printf("success\n");
+                    state = SUCCESS; 
+                    output[firstDataByte-1]=0;
+                    firstDataByte--;
+                }
+                else{
+                    printf("failiure\n");
+                    state=FAILURE;
+                }
+            }
+        }
+        else if(state == FINALFLAG) {
+            if (buf_read[0] == FLAG) {
+                STOP = TRUE;
+                state = SUCCESS;
+            } else {
+                state = FAILURE;
+                firstDataByte -= 3;
+            }
+            if (frame == DISC) {
+                state = DISCONNECTING;
+            }
+        }
+        else state = FAILURE;
     }
-    STOP=FALSE;
-    printf("\n\nllread success\n\n");
-    output[firstDataByte]='\n';
+
+    if(state==SUCCESS){
+        printf("sucsess frame sent\n");
+        *bufSize=firstDataByte;
+        if(frame==FRAME0){
+            frame=FRAME1;
+        }
+        else{
+            frame=FRAME0;
+        }
+        writeSupervisionFrame(0x01, responseFrame);
+        state=FIRSTFLAG;
+        STOP=FALSE;
+    }
+    else if (state==FAILURE) {
+        printf("failure frame sent\n");
+        writeSupervisionFrame(0x01, responseFrame);
+        state=FIRSTFLAG;
+        STOP=FALSE;
+    }
+    else if (state==DISCONNECTING){
+        STOP=FALSE;
+        printf("\n\nallread success\n\n");
+        *bufSize=-1;
+        output[firstDataByte]='\n';
+    }
     return 0;
 }
 
@@ -368,14 +409,11 @@ int llclose(int showStatistics){
     unsigned char cField=0x00;
 
     State state = FIRSTFLAG;
-
-    nRetransmissions = connectionParam.nRetransmissions;
-
-    int bytesWritten = writeSupervisionFrame(0x01,DISC);
-    printf("%d bytes written | ", bytesWritten);
-
+    
+    
     switch(connectionParam.role) {
         case LlTx:{
+            writeSupervisionFrame(0x03,DISC);
             while(nRetransmissions > 0){
                 int bytesRead = read(fd, buf_read, 1);
                 if(state != FIRSTFLAG){
@@ -384,7 +422,6 @@ int llclose(int showStatistics){
                     }
                     printf("state= %d\n",state);
                 }
-
                 if (state != FINALFLAG && buf_read[0] == FLAG) {
                     printf("char= 0x%02X | state= %d\n", buf_read[0],state);
                     state = A;
@@ -408,7 +445,7 @@ int llclose(int showStatistics){
                 else state = FIRSTFLAG;
             }
             if (state!=SUCCESS){
-                write(fd, buf_write, BUF_SIZE);
+                writeSupervisionFrame(0x03,DISC);
                 printf("resent disc\n");
                 if (alarmEnabled == FALSE)
                 {
@@ -421,6 +458,7 @@ int llclose(int showStatistics){
             break;
         }
         case LlRx:{
+            writeSupervisionFrame(0x01,DISC);
             while(!STOP){
                 int bytesRead = read(fd, buf_read, 1);
                 if(state != FIRSTFLAG){

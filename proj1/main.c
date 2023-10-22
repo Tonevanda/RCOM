@@ -5,9 +5,9 @@
 #include <stdlib.h>
 
 #include "application_layer.h"
-#include "link_layer.h"
 
-//#define BAUDRATE 9600
+
+#define BAUDRATE 9600
 #define N_TRIES 3
 #define TIMEOUT 4
 
@@ -41,26 +41,7 @@ int main(int argc, char *argv[])
            TIMEOUT,
            filename);
 
-    LinkLayer connectionParameters;
-    strcpy(connectionParameters.serialPort,serialPort);
-    connectionParameters.role = strcmp(role, "tx") ? LlRx : LlTx;
-    connectionParameters.baudRate = 9600;
-    connectionParameters.nRetransmissions = N_TRIES;
-    connectionParameters.timeout = TIMEOUT;
-
-    llopen(connectionParameters);
-
-    switch(connectionParameters.role){
-        case LlTx:
-            llwrite(NULL, BUF_SIZE);
-            break;
-        case LlRx:
-            llread(NULL);
-    }
-
-    llclose(FALSE);
-
-    //applicationLayer(serialPort, role, BAUDRATE, N_TRIES, TIMEOUT, filename);
+    applicationLayer(serialPort, role, BAUDRATE, N_TRIES, TIMEOUT, filename);
 
     return 0;
 }
