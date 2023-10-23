@@ -5,7 +5,6 @@
 
 volatile int STOP = FALSE;
 int alarmEnabled = FALSE;
-int alarmCount = 0;
 int alarmTimeout = 0;
 int nRetransmissions = 0;
 unsigned char frame=0x00;
@@ -55,10 +54,12 @@ int llopen(LinkLayer connectionParameters){
 
         case LlTx: {
 
+            (void)signal(SIGALRM,alarmHandler);
             while(nRetransmissions > 0){
 
                 int bytes = writeSupervisionFrame(0x03, SET);
                 printf("%d bytes written\n", bytes);
+
                 statistics.nOfBytesllopenSent+=bytes;
                 statistics.nOfPacketsllopenSent++;
                 if (!alarmEnabled){ // enables the timer with timeout seconds 
@@ -68,34 +69,36 @@ int llopen(LinkLayer connectionParameters){
 
                 while(!STOP) {
                     int bytesRead = read(fd, buf_read, 1);
-                    if(state != FIRSTFLAG){
-                        if(bytesRead != 0){
-                            printf("char= 0x%02X | ", buf_read[0]);
+                    if(bytesRead!=0){
+                        if(state != FIRSTFLAG){
+                            if(bytesRead != 0){
+                                printf("char= 0x%02X | ", buf_read[0]);
+                            }
+                            printf("state= %d\n",state);
                         }
-                        printf("state= %d\n",state);
-                    }
 
-                    if (state != FINALFLAG && buf_read[0] == FLAG) {
-                        printf("char= 0x%02X | state= %d\n", buf_read[0],state);
-                        state = A;
+                        if (state != FINALFLAG && buf_read[0] == FLAG) {
+                            printf("char= 0x%02X | state= %d\n", buf_read[0],state);
+                            state = A;
+                        }
+                        else if (state == A && buf_read[0] == 0x03) {
+                            state = C;
+                        }
+                        else if (state == C && buf_read[0] == UA) {
+                            state = BCC1;
+                        }
+                        else if (state == BCC1 && buf_read[0] == (0x03 ^ UA)) {
+                            state = FINALFLAG;
+                        }
+                        else if (state == FINALFLAG && buf_read[0] == FLAG) {
+                            STOP = TRUE;
+                            statistics.nOfBytesllopenRecieved+=5;
+                            statistics.nOfPacketsllopenRecieved++;
+                            nRetransmissions=-1;
+                            alarmEnabled=FALSE;
+                        }
+                        else state = FIRSTFLAG;
                     }
-                    else if (state == A && buf_read[0] == 0x03) {
-                        state = C;
-                    }
-                    else if (state == C && buf_read[0] == UA) {
-                        state = BCC1;
-                    }
-                    else if (state == BCC1 && buf_read[0] == (0x03 ^ UA)) {
-                        state = FINALFLAG;
-                    }
-                    else if (state == FINALFLAG && buf_read[0] == FLAG) {
-                        STOP = TRUE;
-                        statistics.nOfBytesllopenRecieved+=5;
-                        statistics.nOfPacketsllopenRecieved++;
-                        nRetransmissions=-1;
-                        alarmEnabled=FALSE;
-                    }
-                    else state = FIRSTFLAG;
                 }
             }
             break;
@@ -451,36 +454,39 @@ int llclose(int showStatistics){
     
     switch(connectionParam.role) {
         case LlTx:{
+            (void)signal(SIGALRM,alarmHandler);
             writeSupervisionFrame(0x03,DISC);
             while(nRetransmissions > 0){
                 int bytesRead = read(fd, buf_read, 1);
-                if(state != FIRSTFLAG){
-                    if(bytesRead != 0){
-                        printf("char= 0x%02X\n", buf_read[0]);
+                if(bytesRead!=0){
+                    if(state != FIRSTFLAG){
+                        if(bytesRead != 0){
+                            printf("char= 0x%02X\n", buf_read[0]);
+                        }
+                        printf("state= %d\n",state);
                     }
-                    printf("state= %d\n",state);
+                    if (state != FINALFLAG && buf_read[0] == FLAG) {
+                        printf("char= 0x%02X | state= %d\n", buf_read[0],state);
+                        state = A;
+                    }
+                    else if (state == A && buf_read[0] == 0x01) {
+                        state = C;
+                    }
+                    else if (state == C && buf_read[0] == DISC) {
+                        state = BCC1;
+                    }
+                    else if (state == BCC1 && buf_read[0] == (0x01 ^ DISC)) {
+                        state = FINALFLAG;
+                    }
+                    else if (state == FINALFLAG && buf_read[0] == FLAG) {
+                        STOP = TRUE;
+                        nRetransmissions = -1;
+                        alarmEnabled=FALSE;
+                        printf("success");
+                        state=SUCCESS;
+                    }
+                    else state = FIRSTFLAG;
                 }
-                if (state != FINALFLAG && buf_read[0] == FLAG) {
-                    printf("char= 0x%02X | state= %d\n", buf_read[0],state);
-                    state = A;
-                }
-                else if (state == A && buf_read[0] == 0x01) {
-                    state = C;
-                }
-                else if (state == C && buf_read[0] == DISC) {
-                    state = BCC1;
-                }
-                else if (state == BCC1 && buf_read[0] == (0x01 ^ DISC)) {
-                    state = FINALFLAG;
-                }
-                else if (state == FINALFLAG && buf_read[0] == FLAG) {
-                    STOP = TRUE;
-                    nRetransmissions = -1;
-                    alarmEnabled=FALSE;
-                    printf("success");
-                    state=SUCCESS;
-                }
-                else state = FIRSTFLAG;
             }
             if (state!=SUCCESS){
                 writeSupervisionFrame(0x03,DISC);
@@ -607,10 +613,10 @@ int connect(const char *serialPort){
 
 void alarmHandler(int signal){
     alarmEnabled = FALSE;
-    alarmCount++;
+    nRetransmissions--;
     statistics.nOfTimeouts++;
     STOP=TRUE;
-    printf("Alarm #%d\n", alarmCount);
+    printf("Alarm #%d\n", nRetransmissions);
 }
 
 int writeSupervisionFrame(unsigned char A, unsigned char C){
