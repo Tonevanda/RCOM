@@ -13,6 +13,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 
 typedef enum
 {
