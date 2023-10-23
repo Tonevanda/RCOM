@@ -11,13 +11,39 @@ int nRetransmissions = 0;
 unsigned char frame=0x00;
 int fd;
 LinkLayer connectionParam;
+Statistics statistics;
+clock_t begin;
 
 
 ////////////////////////////////////////////////
 // LLOPEN
 ////////////////////////////////////////////////
 int llopen(LinkLayer connectionParameters){
+
+    begin = clock();
+
     printf("llopen start\n\n");
+    statistics.nOfTimeouts=0;
+
+    statistics.nOfBytesllopenSent=0;
+    statistics.nOfPacketsllopenSent=0;
+    
+    statistics.nOfBytesllopenRecieved=0;
+    statistics.nOfPacketsllopenRecieved=0;
+
+    statistics.nOfBytesllwriteSent=0;
+    statistics.nOfPacketsllwriteSent=0;
+    statistics.nOfCharStuffed=0;
+
+    statistics.nOfBytesllreadReceived=0;
+    statistics.nOfPacketsllreadReceived=0;
+    statistics.nOfCharDestuffed=0;
+
+    statistics.nOfBytesllcloseSent=0;
+    statistics.nOfPacketsllcloseSent=0;
+
+    statistics.nOfBytesllcloseReceived=0;
+    statistics.nOfPacketsllcloseReceived=0;
     connectionParam = connectionParameters;
     fd = connect(connectionParameters.serialPort);
     if(fd < 0) return -1;
@@ -33,6 +59,8 @@ int llopen(LinkLayer connectionParameters){
 
                 int bytes = writeSupervisionFrame(0x03, SET);
                 printf("%d bytes written\n", bytes);
+                statistics.nOfBytesllopenSent+=bytes;
+                statistics.nOfPacketsllopenSent++;
                 if (!alarmEnabled){ // enables the timer with timeout seconds 
                     alarm(connectionParameters.timeout);
                     alarmEnabled = TRUE;
@@ -62,6 +90,8 @@ int llopen(LinkLayer connectionParameters){
                     }
                     else if (state == FINALFLAG && buf_read[0] == FLAG) {
                         STOP = TRUE;
+                        statistics.nOfBytesllopenRecieved+=5;
+                        statistics.nOfPacketsllopenRecieved++;
                         nRetransmissions=-1;
                         alarmEnabled=FALSE;
                     }
@@ -96,11 +126,15 @@ int llopen(LinkLayer connectionParameters){
                     }
                     else if(state == FINALFLAG && buf_read[0] == FLAG){
                         STOP=TRUE;
+                        statistics.nOfBytesllopenRecieved+=5;
+                        statistics.nOfPacketsllopenRecieved++;
                     }
                     else state = FIRSTFLAG;
                 }
 
                 int bytes = writeSupervisionFrame(0x03, UA);
+                statistics.nOfBytesllopenSent+=bytes;
+                statistics.nOfPacketsllopenSent++;
                 printf("%d bytes written\n", bytes);
 
             break;
@@ -248,6 +282,7 @@ int llwrite(const unsigned char *buf, int bufSize){
     alarmEnabled=FALSE;
     alarm(0);
     STOP=FALSE;
+    statistics.nOfPacketsllwriteSent++;
     printf("\n\nllwrite success\n\n");
     return 0;
 }
@@ -378,6 +413,9 @@ int llread(unsigned char *output,int* bufSize)
             frame=FRAME0;
         }
         writeSupervisionFrame(0x01, responseFrame);
+        statistics.nOfPacketsllreadReceived++;
+        statistics.nOfBytesllreadReceived+=5;
+        
         state=FIRSTFLAG;
         STOP=FALSE;
     }
@@ -504,6 +542,11 @@ int llclose(int showStatistics){
 
     close(fd); //closes the serial port
     printf("\n\nllclose success\n\n");
+
+    clock_t end = clock();    
+
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("Execution time : %lf seconds",time_spent);
     return 0;
 }
 
@@ -565,6 +608,7 @@ int connect(const char *serialPort){
 void alarmHandler(int signal){
     alarmEnabled = FALSE;
     alarmCount++;
+    statistics.nOfTimeouts++;
     STOP=TRUE;
     printf("Alarm #%d\n", alarmCount);
 }

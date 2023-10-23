@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#include <time.h>
 
 typedef enum
 {
@@ -27,6 +28,31 @@ typedef struct
     int nRetransmissions;
     int timeout;
 } LinkLayer;
+
+typedef struct
+{
+    int nOfTimeouts;
+
+    int nOfBytesllopenSent;
+    int nOfPacketsllopenSent;
+
+    int nOfBytesllopenRecieved;
+    int nOfPacketsllopenRecieved; 
+
+    int nOfBytesllwriteSent;
+    int nOfPacketsllwriteSent;
+    int nOfCharStuffed;
+
+    int nOfBytesllreadReceived;
+    int nOfPacketsllreadReceived;
+    int nOfCharDestuffed;
+
+    int nOfBytesllcloseSent;
+    int nOfPacketsllcloseSent;
+
+    int nOfBytesllcloseReceived;
+    int nOfPacketsllcloseReceived;
+} Statistics;
 
 typedef enum{
     DISCONNECTING,  //0
