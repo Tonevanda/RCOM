@@ -73,11 +73,20 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             unsigned char* output = (unsigned char*) malloc((MAX_PAYLOAD_SIZE*2)+8);
             llread(output,&bufSize);
             int v=0;
-            printf("output[2]= 0x%02X\n", output[2]);
             for (int i = 0; i<output[2]; i++) {
                 v |= (long)(output[3+i] << 8*(output[2]-1-i));
             }
             unsigned char* fileoutput = (unsigned char*) malloc(v);
+            char* filenameoutp = (char*) malloc(2+output[2]+2+10);
+            int i;
+            for(i= 2 + output[2] + 3 ; i<2 + output[2] + 3 + output[2+output[2]+2]-3;i++){
+                filenameoutp[i-2 + output[2] + 3]=output[i];
+            }
+            filenameoutp[i+1]='t';
+            filenameoutp[i+2]='.';
+            filenameoutp[i+3]='g';
+            filenameoutp[i+4]='i';
+            filenameoutp[i+5]='f';
             int totalsize=0;
             while(bufSize!=-1){
                 llread(output,&bufSize);
@@ -131,7 +140,7 @@ unsigned char* createControlPacket(unsigned int c, int filesize, const char* fil
     
     packet[2+L1+1] = 1;
     packet[2+L1+2] = L2;
-    int offset = 2 + L1 + 1 + 1; // need the offset of the V2 field for the memcpy
+    int offset = 2 + L1 + 1 + 1 + 1; // need the offset of the V2 field for the memcpy
     memcpy(packet + offset, filename, L2);
     return packet;
 }
