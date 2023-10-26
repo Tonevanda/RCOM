@@ -36,21 +36,23 @@ typedef struct
 
     int nOfBytesllopenSent;
     int nOfPacketsllopenSent;
-
-    int nOfBytesllopenRecieved;
-    int nOfPacketsllopenRecieved; 
+    int nOfBytesllopenReceived;
+    int nOfPacketsllopenReceived; 
 
     int nOfBytesllwriteSent;
     int nOfPacketsllwriteSent;
+    int nOfBytesllwriteReceived;
+    int nOfPacketsllwriteReceived;
     int nOfCharStuffed;
 
+    int nOfBytesllreadSent;
+    int nOfPacketsllreadSent;
     int nOfBytesllreadReceived;
     int nOfPacketsllreadReceived;
     int nOfCharDestuffed;
 
     int nOfBytesllcloseSent;
     int nOfPacketsllcloseSent;
-
     int nOfBytesllcloseReceived;
     int nOfPacketsllcloseReceived;
 } Statistics;
