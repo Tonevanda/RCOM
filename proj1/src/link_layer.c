@@ -230,11 +230,11 @@ int llwrite(const unsigned char *buf, int bufSize){
             if (bytesRead!=0){
                 statistics.nOfBytesllwriteReceived++;
                 if(state != FIRSTFLAG){
+                }
                     if(bytesRead != 0){
                         printf("char= 0x%02X | ", buf_read[0]);
                     }
                     printf("state= %d\n",state);
-                }
                 if (state != FINALFLAG && buf_read[0] == FLAG) {
                     printf("char= 0x%02X | state= %d\n", buf_read[0],state);
                     state = A;
@@ -243,45 +243,49 @@ int llwrite(const unsigned char *buf, int bufSize){
                     state = C;
                 }
                 else if (state == C) {
-                    if (buf_read[0] == UA) {
-                        state = BCC1;
+                    state = BCC1;
+                    cField = buf_read[0];
+                } 
+                else if (state == BCC1 && buf_read[0] == (0x01 ^ cField)) {
+                    state = FINALFLAG;
+                } 
+                else if (state == FINALFLAG && buf_read[0] == FLAG) {
+                    if (cField == UA) {
+                        state = SUCCESS;
                     }
-                    else if (buf_read[0] == RR0) {
+                    else if (cField == RR0) {
                         if(frame==FRAME0){
                             state=FAILURE;
                         }
                         frame = FRAME0;
-                        state = BCC1;
+                        state = SUCCESS;
                     }
-                    else if (buf_read[0] == RR1) {
+                    else if (cField == RR1) {
                         if(frame==FRAME1){
                             state=FAILURE;
                         }
                         frame = FRAME1;
-                        state = BCC1;
+                        state = SUCCESS;
                     }
-                    else if (buf_read[0] == REJ0 || buf_read[0] == REJ1 || buf_read[0] == DISC) {
+                    else if (cField == REJ0 || cField == REJ1 || cField == DISC) {
                         state=FAILURE;
                     }
-                    cField = buf_read[0];
-                } else if (state == BCC1 && buf_read[0] == (0x01 ^ cField)) {
-                    state = FINALFLAG;
-                } else if (state == FINALFLAG && buf_read[0] == FLAG) {
-                    STOP = TRUE;
-                    alarmEnabled=FALSE;
-                    nRetransmissions=-1;
-                    statistics.nOfPacketsllwriteReceived++;
-                    printf("final transfer complete\n");
                 }
-                else if (state==FAILURE){
-                    STOP=TRUE;
-                    printf("rej recieved or failiure in the response frame\n");
-                    alarmEnabled=FALSE;
-                    state=FIRSTFLAG;
-                    nRetransmissions = connectionParam.nRetransmissions;
-                }
-                
                 else state = FAILURE;
+            }
+            if (state==SUCCESS){
+                STOP = TRUE;
+                alarmEnabled=FALSE;
+                nRetransmissions=-1;
+                statistics.nOfPacketsllwriteReceived++;
+                printf("final transfer complete\n");
+            }
+            else if (state==FAILURE){
+                STOP=TRUE;
+                printf("rej recieved or failiure in the response frame\n");
+                alarmEnabled=FALSE;
+                state=FIRSTFLAG;
+                nRetransmissions = connectionParam.nRetransmissions;
             }
         }
     }
@@ -649,9 +653,9 @@ void alarmHandler(int signal){
 }
 
 int writeSupervisionFrame(unsigned char A, unsigned char C){
-    unsigned char supervisionFrame[6] = {FLAG, A, C, A ^ C, FLAG, '\n'};
+    unsigned char supervisionFrame[5] = {FLAG, A, C, A ^ C, FLAG};
     int bytesWritten = 0;
-    if((bytesWritten = write(fd, supervisionFrame, 6)) < 0) return -1;
+    if((bytesWritten = write(fd, supervisionFrame, 5)) < 0) return -1;
     sleep(1);
     return bytesWritten;
 }
