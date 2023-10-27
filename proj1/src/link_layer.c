@@ -230,10 +230,10 @@ int llwrite(const unsigned char *buf, int bufSize){
             if (bytesRead!=0){
                 statistics.nOfBytesllwriteReceived++;
                 if(state != FIRSTFLAG){
+                }
                     if(bytesRead != 0){
                         printf("char= 0x%02X | ", buf_read[0]);
                     }
-                }
                     printf("state= %d\n",state);
                 if (state != FINALFLAG && buf_read[0] == FLAG) {
                     printf("char= 0x%02X | state= %d\n", buf_read[0],state);
@@ -250,6 +250,7 @@ int llwrite(const unsigned char *buf, int bufSize){
                     state = FINALFLAG;
                 } 
                 else if (state == FINALFLAG && buf_read[0] == FLAG) {
+                    printf("Entered FINALFLAG state\n");
                     if (cField == UA) {
                         state = SUCCESS;
                     }
@@ -257,21 +258,27 @@ int llwrite(const unsigned char *buf, int bufSize){
                         if(frame==FRAME0){
                             state=FAILURE;
                         }
-                        frame = FRAME0;
-                        state = SUCCESS;
+                        else{
+                            frame = FRAME0;
+                            state = SUCCESS;
+                        }
+                        printf("Got success in RR0");
                     }
                     else if (cField == RR1) {
                         if(frame==FRAME1){
                             state=FAILURE;
                         }
-                        frame = FRAME1;
-                        state = SUCCESS;
+                        else{
+                            frame = FRAME1;
+                            state = SUCCESS;
+                        }
+                        printf("Got success in RR1");
                     }
                     else if (cField == REJ0 || cField == REJ1 || cField == DISC) {
                         state=FAILURE;
                     }
                 }
-                else state = FAILURE;
+                else state = FIRSTFLAG;
             }
             if (state==SUCCESS){
                 STOP = TRUE;
