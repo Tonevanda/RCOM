@@ -230,10 +230,10 @@ int llwrite(const unsigned char *buf, int bufSize){
             if (bytesRead!=0){
                 statistics.nOfBytesllwriteReceived++;
                 if(state != FIRSTFLAG){
-                }
                     if(bytesRead != 0){
                         printf("char= 0x%02X | ", buf_read[0]);
                     }
+                }
                     printf("state= %d\n",state);
                 if (state != FINALFLAG && buf_read[0] == FLAG) {
                     printf("char= 0x%02X | state= %d\n", buf_read[0],state);
@@ -309,13 +309,11 @@ int llread(unsigned char *output,int* bufSize)
     State state = FIRSTFLAG;
     unsigned char tmp=0x00;
     unsigned char tmpframe=0x00;
-    firstDataByte=0;
-    state = FIRSTFLAG;
     while(!STOP){
         int bytesRead = read(fd, buf_read, 1);
         if(bytesRead!=0){
             statistics.nOfBytesllreadReceived+=bytesRead;
-            if(state != FIRSTFLAG){
+            if(state != DATA){
                     if(bytesRead != 0){
                         printf("char= 0x%02X | ", buf_read[0]);
                         printf("state= %d\n",state);
@@ -331,16 +329,7 @@ int llread(unsigned char *output,int* bufSize)
                 state = C;
             }
             else if(state == C){
-                if(buf_read[0]==frame || buf_read[0]==DISC || buf_read[0]==SET){
-                    if(frame==FRAME0){
-                        responseFrame = RR1;
-                    }
-                    else if(frame==FRAME1){
-                        responseFrame = RR0;
-                    }
-                    state=BCC1;
-                }
-                else state=FAILURE;
+                state=BCC1;
                 tmpframe=buf_read[0];
             }
             else if(state == BCC1 && buf_read[0]==(0x03 ^ tmpframe)){
@@ -357,6 +346,12 @@ int llread(unsigned char *output,int* bufSize)
                 }
             }
             else if(state == DATA){
+                if(bytesRead != 0){
+                    printf("char= 0x%02X | ", buf_read[0]);
+                    printf("tmp= 0x%02X ", tmp);
+                    printf("from= 0x%02X | ", output[firstDataByte-2]);
+                    printf("state= %d\n",state);
+                }
                 if(firstDataByte!=0 && buf_read[0]==0x5E && output[firstDataByte-1]==0x7D){
                     output[firstDataByte-1]=0x7E;
                     tmp ^= output[firstDataByte-2];
@@ -379,6 +374,9 @@ int llread(unsigned char *output,int* bufSize)
                     }
                 }
                 if(buf_read[0] == FLAG) {
+                    printf("char = 0x%02X | ", buf_read[0]);
+                    printf("tmp = 0x%02X | output[firstDataByte-1] = 0x%02X",tmp,output[firstDataByte-1]);
+                    printf("state = %d\n",state);
                     if(tmp==output[firstDataByte-1]){
                         printf("success\n");
                         state = SUCCESS; 
@@ -400,16 +398,16 @@ int llread(unsigned char *output,int* bufSize)
                         printf("UA sent by llread\n");
                         state=FIRSTFLAG;
                     }
-                    else{
+                    else if(tmpframe == frame){
                         state = SUCCESS;
+                    }
+                    else if (tmpframe == DISC) {
+                        state = DISCONNECTING;
                     }
                 } else {
                     printf("failure with 0x%02X\n",buf_read[0]);
                     state = FAILURE;
                     firstDataByte -= 3;
-                }
-                if (tmpframe == DISC) {
-                    state = DISCONNECTING;
                 }
             }
             else state = FAILURE;
@@ -419,9 +417,11 @@ int llread(unsigned char *output,int* bufSize)
             *bufSize=firstDataByte;
             if(frame==FRAME0){
                 frame=FRAME1;
+                responseFrame = RR1;
             }
             else{
                 frame=FRAME0;
+                responseFrame = RR0;
             }
             int bytes =writeSupervisionFrame(0x01, responseFrame);
             statistics.nOfPacketsllreadReceived++;
@@ -439,6 +439,8 @@ int llread(unsigned char *output,int* bufSize)
             }
             printf("failure frame sent with 0x%02X\n",responseFrame);
             writeSupervisionFrame(0x01, responseFrame);
+            tmp=0x00;
+            firstDataByte=0;
             state=FIRSTFLAG;
         }
         else if (state==DISCONNECTING){
