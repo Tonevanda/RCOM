@@ -250,12 +250,13 @@ int llwrite(const unsigned char *buf, int bufSize){
 ////////////////////////////////////////////////
 // LLREAD
 ////////////////////////////////////////////////
-int llread(unsigned char *output,int* bufSize)
+int llread(unsigned char *output)
 {
     printf("llread start\n\n");
     unsigned char buf_read[2] = {0};
     int responseFrame=0;
     int currentIndex=0;
+    int bufSize=0;
     unsigned char bcc2Field=0x00;
     unsigned char cField=0x00;
     State state = FIRSTFLAG;
@@ -354,7 +355,7 @@ int llread(unsigned char *output,int* bufSize)
             else state = FAILURE;
         }
         if(state==SUCCESS){
-            *bufSize=currentIndex;
+            bufSize=currentIndex;
             if(frame==FRAME0){
                 frame=FRAME1;
                 responseFrame = RR1;
@@ -386,12 +387,12 @@ int llread(unsigned char *output,int* bufSize)
         }
         else if (state==DISCONNECTING){
             STOP=TRUE;
-            *bufSize=-1;
+            bufSize=-2;
         }
     }
     STOP=FALSE;
     printf("llread success\n\n");
-    return 0;
+    return bufSize;
 }
 
 ////////////////////////////////////////////////
@@ -470,9 +471,9 @@ int llclose(int showStatistics){
             int bytes = writeSupervisionFrame(0x01,DISC);
             statistics.nOfBytesllcloseSent+=bytes;
             statistics.nOfPacketsllcloseSent++;
-            nRetransmissions = 5;
+            nRetransmissions = 1;
             if (!alarmEnabled){  
-                alarm(5);
+                alarm(7);
                 alarmEnabled = TRUE;
                 statistics.nOfBytesllcloseSent+=bytes;
                 statistics.nOfPacketsllcloseSent++;
@@ -514,8 +515,8 @@ int llclose(int showStatistics){
             }
             if(nRetransmissions==0){
                 printf("llclose finished due to timeout\n");
-            break;
             }
+            break;
         }
     }
 

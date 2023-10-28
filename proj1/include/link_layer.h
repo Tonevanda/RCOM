@@ -58,16 +58,16 @@ typedef struct
 } Statistics;
 
 typedef enum{
-    DISCONNECTING,  //0
-    FIRSTFLAG,      //1
-    A,              //2
-    C,              //3
-    BCC1,           //4
-    DATA,           //5
-    BCC2,           //6
+    FIRSTFLAG,      //0
+    A,              //1
+    C,              //2
+    BCC1,           //3
+    DATA,           //4
+    BCC2,           //5
+    FINALFLAG,      //6
     SUCCESS,        //7
     FAILURE,        //8
-    FINALFLAG       //9
+    DISCONNECTING   //9
 } State; //expected field
 
 // SIZE of maximum acceptable payload.
@@ -98,15 +98,24 @@ typedef enum{
 
 // Open a connection using the "port" parameters defined in struct linkLayer.
 // Return "1" on success or "-1" on error.
+
+//Abre a conecção entre os dois computadores utilizando os parametros definidos na struct linkLayer.
+//Retorna 1 em caso de sucesso e -1 em caso de erro.
 int llopen(LinkLayer connectionParameters);
 
 // Send data in buf with size bufSize.
 // Return number of chars written, or "-1" on error.
+
+//Envia os dados contidos no buffer com o tamanho bufSize.
+//Retorna o numero de bytes escritos ou -1 em caso de erro.
 int llwrite(const unsigned char *buf, int bufSize);
 
 // Receive data in packet.
 // Return number of chars read, or "-1" on error.
-int llread(unsigned char *packet,int* bufSize);
+
+//Lê os dados contidos no pacote a ser recebido.
+//Retorna o numero de bytes lidos ou -1 em caso de erro
+int llread(unsigned char *packet);
 
 // Close previously opened connection.
 // if showStatistics == TRUE, link layer should print statistics in the console on close.

@@ -72,7 +72,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         case LlRx: {
             int bufSize=0;
             unsigned char* output = (unsigned char*) malloc((MAX_PAYLOAD_SIZE*2)+8);
-            llread(output,&bufSize);
+            bufSize = llread(output);
             int v=0;
             for (int i = 0; i<output[2]; i++) {
                 v |= (long)(output[3+i] << 8*(output[2]-1-i));
@@ -109,8 +109,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             originalFileName[i++]='d';
             memcpy(originalFileName+i,fileExtension,extentionCharCounter);
             int totalsize=0;
-            while(bufSize!=-1){
-                llread(output,&bufSize);
+            while(bufSize!=-2){
+                bufSize = llread(output);
                 if(output[0]==1){
                     memcpy(fileoutput+totalsize,output+3,bufSize-3);
                     totalsize+=(bufSize-3);
