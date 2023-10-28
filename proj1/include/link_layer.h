@@ -123,4 +123,6 @@ void alarmHandler(int signal);
 // Returns number of bytes written
 int writeSupervisionFrame(unsigned char A, unsigned char C);
 
+int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf);
+
 #endif // _LINK_LAYER_H_

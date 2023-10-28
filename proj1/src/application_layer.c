@@ -116,6 +116,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     totalsize+=(bufSize-3);
                 }
             }
+            //stat fix
+            statistics.nOfBytesllreadReceived-=5;
+            statistics.nOfBytesllcloseReceived+=5;
+            statistics.nOfPacketsllcloseReceived++;
+            
             printf("\nfinal open\n");
             FILE *fp = fopen( originalFileName , "wb" );
             if (fp==NULL) {
@@ -130,6 +135,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Closing failiure\n");
         exit(-1);
     }
+    
     switch (connectionParameters.role) {
         //statistics
         case LlTx: {
