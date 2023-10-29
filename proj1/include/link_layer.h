@@ -95,43 +95,35 @@ typedef enum{
 #define FRAME0 0x00
 #define FRAME1 0x40
 
-
-// Open a connection using the "port" parameters defined in struct linkLayer.
-// Return "1" on success or "-1" on error.
-
-//Abre a conecção entre os dois computadores utilizando os parametros definidos na struct linkLayer.
-//Retorna 1 em caso de sucesso e -1 em caso de erro.
+// Abre a conexão entre os dois computadores utilizando os parâmetros definidos na struct linkLayer.
+// Retorna 1 em caso de sucesso e -1 em caso de erro.
 int llopen(LinkLayer connectionParameters);
 
-// Send data in buf with size bufSize.
-// Return number of chars written, or "-1" on error.
-
-//Envia os dados contidos no buffer com o tamanho bufSize.
-//Retorna o numero de bytes escritos ou -1 em caso de erro.
+// Envia os dados contidos no buffer com o tamanho bufSize.
+// Retorna o número de bytes escritos ou -1 em caso de erro.
 int llwrite(const unsigned char *buf, int bufSize);
 
-// Receive data in packet.
-// Return number of chars read, or "-1" on error.
-
-//Lê os dados contidos no pacote a ser recebido.
-//Retorna o numero de bytes lidos ou -1 em caso de erro
+// Lê os dados contidos no pacote a ser recebido.
+// Retorna o número de bytes lidos ou -1 em caso de erro ou -2 caso tenha lido um DISC.
 int llread(unsigned char *packet);
 
-// Close previously opened connection.
-// if showStatistics == TRUE, link layer should print statistics in the console on close.
-// Return "1" on success or "-1" on error.
+// Fecha a conexão entre os dois computadores.
+// Se showStatistics == TRUE, a camada de ligação deve imprimir as estatisticas no terminal.
+// Retorna 1 em caso de sucesso e -1 em caso de erro.
 int llclose(int showStatistics);
 
-// Connects to the serialPort passed as parameter and initiates termios structs
-// Returns fd if successful or -1 in case of error
+// Faz a conexão entre os dois computadores (chamado pelo llopen)
+// Retorna fd ou -1 em caso de erro.
 int connect(const char *serialPort);
 
+// Lida com a interrupção do alarme
 void alarmHandler(int signal);
 
-// Writes the supervision frame to the receiver
-// Returns number of bytes written
+// Escreve o pacote de supervisão para o recetor
+// Retorna o número de bytes escritos
 int writeSupervisionFrame(unsigned char A, unsigned char C);
 
+// Realiza Byte Stuffing no buffer
 int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf);
 
 #endif // _LINK_LAYER_H_
