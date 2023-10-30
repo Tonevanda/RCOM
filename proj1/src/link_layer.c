@@ -11,14 +11,13 @@ unsigned char frame=0x00;
 int fd;
 LinkLayer connectionParam;
 Statistics statistics;
-clock_t begin;
-
+struct timeval begin, end;
 
 ////////////////////////////////////////////////
 // LLOPEN
 ////////////////////////////////////////////////
 int llopen(LinkLayer connectionParameters){
-    begin = clock();
+    gettimeofday(&begin, NULL);
     printf("llopen start\n\n");
 
     statistics.nOfTimeouts=0;
@@ -38,6 +37,7 @@ int llopen(LinkLayer connectionParameters){
     statistics.nOfPacketsllreadReceived=0;
     statistics.nOfBytesllreadReceived=0;
     statistics.nOfPacketsllreadReceived=0;
+    statistics.nOfREJSent=0;
     statistics.nOfCharDestuffed=0;
 
     statistics.nOfBytesllcloseSent=0;
@@ -152,7 +152,6 @@ int llwrite(const unsigned char *buf, int bufSize){
     unsigned char cField = 0x00;
 
     unsigned char buf_read[2] = {0};
-    //sleep(1);
     
     while (nRetransmissions > 0)
     { 
@@ -381,6 +380,7 @@ int llread(unsigned char *output)
             }
             writeSupervisionFrame(0x03, responseFrame);
             printf("failure frame sent with 0x%02X\n",responseFrame);
+            statistics.nOfREJSent++;
             bcc2Field=0x00;
             currentIndex=0;
             state=FIRSTFLAG;
@@ -455,8 +455,6 @@ int llclose(int showStatistics){
                     }
                 }
             }
-            printf("activate noise :3");
-            sleep(1);
             int bytes = writeSupervisionFrame(0x01,UA);
             statistics.nOfBytesllcloseSent+=bytes;
             statistics.nOfPacketsllcloseSent++;
@@ -464,6 +462,47 @@ int llclose(int showStatistics){
             if(nRetransmissions==0){
                 printf("MASSIVE failure");
                 exit(-1);
+            }
+            else{
+                printf("\n\nllclose success\n\n");
+            }
+            if(showStatistics){
+                gettimeofday(&end, NULL);
+                double time_spent = (end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec) / 1000000.0;
+                //Print all statistics from the statistic struct formated in a table form
+                printf("\n|----------------------------------------------|\n");
+                printf("|------------Transmitter statistics------------|\n");
+                printf("|----------------------------------------------|\n");
+                printf("| Number of timeouts                 | %-7d |\n", statistics.nOfTimeouts);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llopen sent        | %-7d |\n", statistics.nOfBytesllopenSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llopen sent      | %-7d |\n", statistics.nOfPacketsllopenSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llopen received    | %-7d |\n", statistics.nOfBytesllopenReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llopen received  | %-7d |\n", statistics.nOfPacketsllopenReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llwrite sent       | %-7d |\n", statistics.nOfBytesllwriteSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llwrite sent     | %-7d |\n", statistics.nOfPacketsllwriteSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llwrite received   | %-7d |\n", statistics.nOfBytesllwriteReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llwrite received | %-7d |\n", statistics.nOfPacketsllwriteReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llclose received   | %-7d |\n", statistics.nOfBytesllcloseReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llclose received | %-7d |\n", statistics.nOfPacketsllcloseReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llclose sent       | %-7d |\n", statistics.nOfBytesllcloseSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llclose sent     | %-7d |\n", statistics.nOfPacketsllcloseSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of stuffed characters       | %-7d |\n", statistics.nOfCharStuffed);
+                printf("|----------------------------------------------|\n");
+                printf("| Execution time in seconds          | %.4lf |\n",time_spent);
+                printf("|----------------------------------------------|\n");
             }
             break;
         }
@@ -516,17 +555,62 @@ int llclose(int showStatistics){
             if(nRetransmissions==0){
                 printf("llclose finished due to timeout\n");
             }
+            else{
+                printf("\n\nllclose success\n\n");
+            }
+            if(showStatistics){
+                gettimeofday(&end, NULL);
+                double time_spent = (end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec) / 1000000.0;
+                double r = statistics.nOfBytesllreadReceived*8/time_spent;
+                double s = r/connectionParam.baudRate; 
+                double FER = ((double)statistics.nOfREJSent/statistics.nOfPacketsllreadReceived+statistics.nOfREJSent)*100;  
+                //Print all statistics from the statistic struct formated in a table form
+                printf("\n|----------------------------------------------|\n");
+                printf("|------------Receiver statistics---------------|\n");
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llopen sent        | %-7d |\n", statistics.nOfBytesllopenSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llopen sent      | %-7d |\n", statistics.nOfPacketsllopenSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llopen received    | %-7d |\n", statistics.nOfBytesllopenReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llopen received  | %-7d |\n", statistics.nOfPacketsllopenReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llread sent        | %-7d |\n", statistics.nOfBytesllreadSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llread sent      | %-7d |\n", statistics.nOfPacketsllreadSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llread received    | %-7d |\n", statistics.nOfBytesllreadReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llread received  | %-7d |\n", statistics.nOfPacketsllreadReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of REJ's sent               | %-7d |\n", statistics.nOfREJSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llclose received   | %-7d |\n", statistics.nOfBytesllcloseReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llclose received | %-7d |\n", statistics.nOfPacketsllcloseReceived);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of bytes llclose sent       | %-7d |\n", statistics.nOfBytesllcloseSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of packets llclose sent     | %-7d |\n", statistics.nOfPacketsllcloseSent);
+                printf("|----------------------------------------------|\n");
+                printf("| Number of destuffed characters     | %-7d |\n", statistics.nOfCharDestuffed);
+                printf("|----------------------------------------------|\n");
+                printf("| R                                  | %.2lf |\n", r);
+                printf("|----------------------------------------------|\n");
+                printf("| S                                  | %.5lf |\n", s);
+                printf("|----------------------------------------------|\n");
+                printf("| FER                                | %.4lf%% |\n", FER);
+                printf("|----------------------------------------------|\n");
+                printf("| Execution time in seconds          | %.4lf |\n",time_spent);
+                printf("|----------------------------------------------|\n");
+
+            }
             break;
         }
     }
 
     close(fd); //closes the serial port
-    printf("\n\nllclose success\n\n");
-
-    clock_t end = clock();    
-
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("Execution time : %lf seconds",time_spent);
     return 0;
 }
 
@@ -649,4 +733,59 @@ int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf)
     offset++;
     *bufSize+=offset;
     return 0;
+}
+
+int getBaudRate(speed_t baud){
+    switch (baud) {
+        case B110:
+            return 110;
+        case B300:
+            return 300;
+        case B600:
+            return 600;
+        case B1200:
+            return 1200;
+        case B2400:
+            return 2400;
+        case B4800:
+            return 4800;
+        case B9600:
+            return 9600;
+        case B19200:
+            return 19200;
+        case B38400:
+            return 38400;
+        case B57600:
+            return 57600;
+        case B115200:
+            return 115200;
+        case B230400:
+            return 230400;
+        case B460800:
+            return 460800;
+        case B500000:
+            return 500000;
+        case B576000:
+            return 576000;
+        case B921600:
+            return 921600;
+        case B1000000:
+            return 1000000;
+        case B1152000:
+            return 1152000;
+        case B1500000:
+            return 1500000;
+        case B2000000:
+            return 2000000;
+        case B2500000:
+            return 2500000;
+        case B3000000:
+            return 3000000;
+        case B3500000:
+            return 3500000;
+        case B4000000:
+            return 4000000;
+        default: 
+            return -1;
+    }
 }

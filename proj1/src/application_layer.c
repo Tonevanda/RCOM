@@ -131,80 +131,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             break;
         }
     }
-    if(llclose(0)){
+    if(llclose(1)){
         printf("Closing failiure\n");
         exit(-1);
-    }
-    
-    switch (connectionParameters.role) {
-        //statistics
-        case LlTx: {
-            //Print all statistics from the statistic struct formated in a table form
-            printf("\n|----------------------------------------------|\n");
-            printf("|------------Transmitter statistics------------|\n");
-            printf("|----------------------------------------------|\n");
-            printf("| Number of timeouts                 | %-7d |\n", statistics.nOfTimeouts);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llopen sent        | %-7d |\n", statistics.nOfBytesllopenSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llopen sent      | %-7d |\n", statistics.nOfPacketsllopenSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llopen received    | %-7d |\n", statistics.nOfBytesllopenReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llopen received  | %-7d |\n", statistics.nOfPacketsllopenReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llwrite sent       | %-7d |\n", statistics.nOfBytesllwriteSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llwrite sent     | %-7d |\n", statistics.nOfPacketsllwriteSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llwrite received   | %-7d |\n", statistics.nOfBytesllwriteReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llwrite received | %-7d |\n", statistics.nOfPacketsllwriteReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llclose received   | %-7d |\n", statistics.nOfBytesllcloseReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llclose received | %-7d |\n", statistics.nOfPacketsllcloseReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llclose sent       | %-7d |\n", statistics.nOfBytesllcloseSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llclose sent     | %-7d |\n", statistics.nOfPacketsllcloseSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of stuffed characters       | %-7d |\n", statistics.nOfCharStuffed);
-            printf("|----------------------------------------------|\n");
-            break;
-        }
-        case LlRx: {
-            printf("\n|----------------------------------------------|\n");
-            printf("|------------Receiver statistics---------------|\n");
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llopen sent        | %-7d |\n", statistics.nOfBytesllopenSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llopen sent      | %-7d |\n", statistics.nOfPacketsllopenSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llopen received    | %-7d |\n", statistics.nOfBytesllopenReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llopen received  | %-7d |\n", statistics.nOfPacketsllopenReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llread sent        | %-7d |\n", statistics.nOfBytesllreadSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llread sent      | %-7d |\n", statistics.nOfPacketsllreadSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llread received    | %-7d |\n", statistics.nOfBytesllreadReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llread received  | %-7d |\n", statistics.nOfPacketsllreadReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llclose received   | %-7d |\n", statistics.nOfBytesllcloseReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llclose received | %-7d |\n", statistics.nOfPacketsllcloseReceived);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of bytes llclose sent       | %-7d |\n", statistics.nOfBytesllcloseSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of packets llclose sent     | %-7d |\n", statistics.nOfPacketsllcloseSent);
-            printf("|----------------------------------------------|\n");
-            printf("| Number of destuffed characters     | %-7d |\n", statistics.nOfCharDestuffed);
-            printf("|----------------------------------------------|\n");
-            break;
-        }
     }
 }
 

@@ -13,6 +13,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/time.h>
 #include <signal.h>
 
 typedef enum
@@ -49,6 +50,7 @@ typedef struct
     int nOfPacketsllreadSent;
     int nOfBytesllreadReceived;
     int nOfPacketsllreadReceived;
+    int nOfREJSent;
     int nOfCharDestuffed;
 
     int nOfBytesllcloseSent;
@@ -94,6 +96,10 @@ typedef enum{
 #define DISC 0x0B
 #define FRAME0 0x00
 #define FRAME1 0x40
+
+
+int getBaudRate(speed_t baud);
+
 
 // Abre a conexão entre os dois computadores utilizando os parâmetros definidos na struct linkLayer.
 // Retorna 1 em caso de sucesso e -1 em caso de erro.
