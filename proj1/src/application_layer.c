@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 extern Statistics statistics;
+extern int v;
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename){
@@ -73,7 +74,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             int bufSize=0;
             unsigned char* output = (unsigned char*) malloc((MAX_PAYLOAD_SIZE*2)+8);
             bufSize = llread(output);
-            int v=0;
+            v=0;
             for (int i = 0; i<output[2]; i++) {
                 v |= (long)(output[3+i] << 8*(output[2]-1-i));
             }
