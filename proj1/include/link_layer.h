@@ -74,7 +74,7 @@ typedef enum{
 
 // SIZE of maximum acceptable payload.
 // Maximum number of bytes that application layer should send to link layer
-#define MAX_PAYLOAD_SIZE 300
+#define MAX_PAYLOAD_SIZE 700
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
