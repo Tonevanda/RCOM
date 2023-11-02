@@ -561,9 +561,12 @@ int llclose(int showStatistics){
             if(showStatistics){
                 gettimeofday(&end, NULL);
                 double time_spent = (end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec) / 1000000.0;
-                double r = statistics.nOfBytesllreadReceived*8/time_spent;
-                double s = r/connectionParam.baudRate; 
-                double FER = ((double)statistics.nOfREJSent/statistics.nOfPacketsllreadReceived+statistics.nOfREJSent)*100;  
+                double r = (v*8)/time_spent;
+                double practical_efficiency = (r/connectionParam.baudRate)*100; 
+                double FER = ((double)statistics.nOfREJSent/(statistics.nOfPacketsllreadReceived+statistics.nOfREJSent))*100;
+                double tf = (double)((MAX_PAYLOAD_SIZE+6)*8)/connectionParam.baudRate;
+                double pe = (double)FER/100;
+                double theoretical_efficiency = (double)(1-pe)/(1+2*(tf/T_PROP));
                 //Print all statistics from the statistic struct formated in a table form
                 printf("\n|----------------------------------------------|\n");
                 printf("|------------Receiver statistics---------------|\n");

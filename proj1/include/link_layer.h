@@ -97,6 +97,7 @@ typedef enum{
 #define FRAME0 0x00
 #define FRAME1 0x40
 
+#define T_PROP 0.1
 
 int getBaudRate(speed_t baud);
 
