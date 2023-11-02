@@ -99,9 +99,8 @@ typedef enum{
 #define FRAME0 0x00
 #define FRAME1 0x40
 
-
-int getBaudRate(speed_t baud);
-
+// Recebe um inteiro baudrate e converta na sua forma speed_t para abrir o serial port
+speed_t getBaudRate(int baudRate);
 
 // Abre a conexão entre os dois computadores utilizando os parâmetros definidos na struct linkLayer.
 // Retorna 1 em caso de sucesso e -1 em caso de erro.
