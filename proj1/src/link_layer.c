@@ -12,6 +12,7 @@ int fd;
 LinkLayer connectionParam;
 Statistics statistics;
 struct timeval begin, end;
+int v;
 
 ////////////////////////////////////////////////
 // LLOPEN
