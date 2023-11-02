@@ -601,9 +601,11 @@ int llclose(int showStatistics){
                 printf("|----------------------------------------------|\n");
                 printf("| R                                  | %.2lf |\n", r);
                 printf("|----------------------------------------------|\n");
-                printf("| S                                  | %.5lf |\n", s);
-                printf("|----------------------------------------------|\n");
                 printf("| FER                                | %.4lf%% |\n", FER);
+                printf("|----------------------------------------------|\n");
+                printf("| Practical efficiency               | %.3lf%% |\n", practical_efficiency);
+                printf("|----------------------------------------------|\n");
+                printf("| Theoretical efficiency             | %.3lf%% |\n", theoretical_efficiency*100);
                 printf("|----------------------------------------------|\n");
                 printf("| Execution time in seconds          | %.4lf |\n",time_spent);
                 printf("|----------------------------------------------|\n");
