@@ -78,15 +78,13 @@ typedef enum{
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
+#define BAUDRATE B38400
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 // MISC
 #define FALSE 0
 #define TRUE 1
 #define BUF_SIZE 256
-
-#define T_PROP 0.1 
-
 
 #define FLAG 0x7E
 #define SET 0x03

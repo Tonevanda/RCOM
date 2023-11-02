@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
            "  - Filename: %s\n",
            serialPort,
            role,
-           BAUDRATE,
+           9600,
            N_TRIES,
            TIMEOUT,
            filename);
