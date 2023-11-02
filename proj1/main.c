@@ -7,7 +7,7 @@
 #include "application_layer.h"
 
 
-#define BAUDRATE 9600
+#define BAUDRATE 38400
 #define N_TRIES 3
 #define TIMEOUT 4
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
            "  - Filename: %s\n",
            serialPort,
            role,
-           9600,
+           BAUDRATE,
            N_TRIES,
            TIMEOUT,
            filename);
