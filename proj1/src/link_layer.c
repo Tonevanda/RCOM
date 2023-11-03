@@ -564,7 +564,7 @@ int llclose(int showStatistics){
                 double time_spent = (end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec) / 1000000.0;
                 double r = (v*8)/time_spent;
                 double practical_efficiency = (r/connectionParam.baudRate)*100; 
-                double FER = ((double)statistics.nOfREJSent/(statistics.nOfPacketsllreadReceived+statistics.nOfREJSent))*100;
+                double FER = ((double)statistics.nOfREJSent/(statistics.nOfPacketsllreadReceived))*100;
                 double tf = (double)((MAX_PAYLOAD_SIZE+6)*8)/connectionParam.baudRate;
                 double pe = (double)FER/100;
                 double theoretical_efficiency = (double)(1-pe)/(1+2*(T_PROP/tf));
