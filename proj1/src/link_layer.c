@@ -159,7 +159,7 @@ int llwrite(const unsigned char *buf, int bufSize){
         if (alarmEnabled == FALSE)
         {   
             int index = 0;
-            int byteChanged = changeFrame(buf_write, bufSize, PROBABILITY, index);
+            int byteChanged = changeFrame(buf_write, bufSize, PROBABILITY, &index);
             int bytes = write(fd, buf_write, bufSize);
             changeFrameBack(buf_write, index, byteChanged);
             printf("%d bytes written\n", bytes);
