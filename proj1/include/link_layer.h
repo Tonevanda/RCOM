@@ -134,7 +134,7 @@ int writeSupervisionFrame(unsigned char A, unsigned char C);
 // Realiza Byte Stuffing no buffer
 int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf);
 
-int changeFrame(unsigned char * frame, int size, int probability, int * idx):
+int changeFrame(unsigned char * frame, int size, int probability, int * idx);
 
 int changeFrameBack(unsigned char * frame, int idx, int saved);
 
