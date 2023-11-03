@@ -160,7 +160,7 @@ int llwrite(const unsigned char *buf, int bufSize){
         {
             int bytes = write(fd, buf_write, bufSize);
             printf("%d bytes written\n", bytes);
-            sleep(1);
+            sleep(T_PROP);
             statistics.nOfBytesllwriteSent+=bufSize;
             statistics.nOfPacketsllwriteSent++;
             alarm(connectionParam.timeout); // Set alarm to be triggered in 3s
