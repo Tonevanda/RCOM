@@ -567,7 +567,7 @@ int llclose(int showStatistics){
                 double FER = ((double)statistics.nOfREJSent/(statistics.nOfPacketsllreadReceived+statistics.nOfREJSent))*100;
                 double tf = (double)((MAX_PAYLOAD_SIZE+6)*8)/connectionParam.baudRate;
                 double pe = (double)FER/100;
-                double theoretical_efficiency = (double)(1-pe)/(1+2*(tf/T_PROP));
+                double theoretical_efficiency = (double)(1-pe)/(2+1*(tf/T_PROP));
                 //Print all statistics from the statistic struct formated in a table form
                 printf("\n|----------------------------------------------|\n");
                 printf("|------------Receiver statistics---------------|\n");
