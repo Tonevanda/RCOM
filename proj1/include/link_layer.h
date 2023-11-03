@@ -15,6 +15,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <signal.h>
+#include <random.h>
 
 typedef enum
 {
@@ -78,7 +79,7 @@ typedef enum{
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
-#define BAUDRATE B4800
+#define BAUDRATE B19200
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 // MISC
