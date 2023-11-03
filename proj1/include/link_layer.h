@@ -98,6 +98,7 @@ typedef enum{
 #define FRAME1 0x40
 
 #define T_PROP 0.1
+#define PROBABILITY 0
 
 int getBaudRate(speed_t baud);
 
@@ -132,5 +133,9 @@ int writeSupervisionFrame(unsigned char A, unsigned char C);
 
 // Realiza Byte Stuffing no buffer
 int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf);
+
+int changeFrame(unsigned char * frame, int size, int probability, int * idx):
+
+int changeFrameBack(unsigned char * frame, int idx, int saved);
 
 #endif // _LINK_LAYER_H_

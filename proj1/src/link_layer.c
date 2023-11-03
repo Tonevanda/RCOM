@@ -157,8 +157,11 @@ int llwrite(const unsigned char *buf, int bufSize){
     while (nRetransmissions > 0)
     { 
         if (alarmEnabled == FALSE)
-        {
+        {   
+            int index = 0;
+            int byteChanged = changeFrame(buf_write, bufSize, PROBABILITY, index);
             int bytes = write(fd, buf_write, bufSize);
+            changeFrameBack(buf_write, index, byteChanged);
             printf("%d bytes written\n", bytes);
             sleep(T_PROP);
             statistics.nOfBytesllwriteSent+=bufSize;
@@ -740,6 +743,25 @@ int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf)
     buf_write[*bufSize+offset] = FLAG;
     offset++;
     *bufSize+=offset;
+    return 0;
+}
+
+int changeFrame(unsigned char* frame, int frameSize, int probability, int *index){
+    
+    *index = rand() % (frameSize);
+    int saved = frame[*index];
+    int change = rand() % (101);
+    if(change < probability){
+        frame[*index] ^= 0xFF;
+        printf("Caused an artificial error at packet[%d] from %02X to %02X\n", *index, saved, frame[*index]);
+        return saved;
+    }
+    return -1;
+}
+
+int changeFrameBack(unsigned char* frame, int index, int saved){
+    frame[index] = saved;
+    printf("The error was eliminated at packet[%d] to %02X\n", index, frame[index]);
     return 0;
 }
 
