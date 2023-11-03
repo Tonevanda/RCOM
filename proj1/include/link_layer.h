@@ -78,7 +78,7 @@ typedef enum{
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
-#define BAUDRATE B4800
+#define BAUDRATE B9600
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 // MISC
