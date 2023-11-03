@@ -15,7 +15,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include <signal.h>
-#include <random.h>
 
 typedef enum
 {
