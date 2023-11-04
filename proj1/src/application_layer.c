@@ -12,9 +12,82 @@
 #include <termios.h>
 #include <unistd.h>
 
+typedef struct
+{
+    int nOfTimeouts;
+
+    int nOfBytesllopenSent;
+    int nOfPacketsllopenSent;
+    int nOfBytesllopenReceived;
+    int nOfPacketsllopenReceived; 
+
+    int nOfBytesllwriteSent;
+    int nOfPacketsllwriteSent;
+    int nOfBytesllwriteReceived;
+    int nOfPacketsllwriteReceived;
+    int nOfCharStuffed;
+
+    int nOfBytesllreadSent;
+    int nOfPacketsllreadSent;
+    int nOfBytesllreadReceived;
+    int nOfPacketsllreadReceived;
+    int nOfREJSent;
+    int nOfCharDestuffed;
+
+    int nOfBytesllcloseSent;
+    int nOfPacketsllcloseSent;
+    int nOfBytesllcloseReceived;
+    int nOfPacketsllcloseReceived;
+} Statistics;
+
 extern Statistics statistics;
 
 extern int v;
+
+unsigned char* createControlPacket(unsigned int c, int filesize, const char* filename,int* packSize){
+
+    int decimalNumber = filesize;
+    char hexadecimalString[10];
+    sprintf(hexadecimalString, "%x", decimalNumber);
+    int count = 0;
+    while(hexadecimalString[count]!='\0'){
+        count++;
+    }
+    int L1 = (int) ceilf((float)count/2.0);
+    int L2 = strlen(filename);
+    *packSize = 5 + L1 + L2;
+
+    unsigned char *packet = (unsigned char*)malloc(*packSize);
+
+    packet[0] = c;
+    packet[1] = 0;
+    packet[2] = L1;
+    
+    for (unsigned char i = 0 ; i < L1 ; i++) {
+        packet[2+L1-i] = filesize & 0xFF;
+        filesize = filesize >> 8;
+    }
+    
+    packet[2+L1+1] = 1;
+    packet[2+L1+2] = L2;
+    int offset = 2 + L1 + 1 + 1 + 1; // need the offset of the V2 field for the memcpy
+    memcpy(packet + offset, filename, L2);
+    return packet;
+}
+
+unsigned char* createDataPacket(unsigned char *data, int dataSize, int *packetSize){
+
+    *packetSize = 1 + 2 + dataSize;
+
+    unsigned char* packet = (unsigned char*)malloc(*packetSize);
+
+    packet[0] = 1;
+    packet[1] = (dataSize >> 8) & 0xFF;
+    packet[2] = dataSize & 0xFF;
+    memcpy(packet + 3, data, dataSize);
+
+    return packet;
+}
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename){
@@ -137,49 +210,4 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Closing failure\n");
         exit(-1);
     }
-}
-
-unsigned char* createControlPacket(unsigned int c, int filesize, const char* filename,int* packSize){
-
-    int decimalNumber = filesize;
-    char hexadecimalString[10];
-    sprintf(hexadecimalString, "%x", decimalNumber);
-    int count = 0;
-    while(hexadecimalString[count]!='\0'){
-        count++;
-    }
-    int L1 = (int) ceilf((float)count/2.0);
-    int L2 = strlen(filename);
-    *packSize = 5 + L1 + L2;
-
-    unsigned char *packet = (unsigned char*)malloc(*packSize);
-
-    packet[0] = c;
-    packet[1] = 0;
-    packet[2] = L1;
-    
-    for (unsigned char i = 0 ; i < L1 ; i++) {
-        packet[2+L1-i] = filesize & 0xFF;
-        filesize = filesize >> 8;
-    }
-    
-    packet[2+L1+1] = 1;
-    packet[2+L1+2] = L2;
-    int offset = 2 + L1 + 1 + 1 + 1; // need the offset of the V2 field for the memcpy
-    memcpy(packet + offset, filename, L2);
-    return packet;
-}
-
-unsigned char* createDataPacket(unsigned char *data, int dataSize, int *packetSize){
-
-    *packetSize = 1 + 2 + dataSize;
-
-    unsigned char* packet = (unsigned char*)malloc(*packetSize);
-
-    packet[0] = 1;
-    packet[1] = (dataSize >> 8) & 0xFF;
-    packet[2] = dataSize & 0xFF;
-    memcpy(packet + 3, data, dataSize);
-
-    return packet;
 }
