@@ -123,7 +123,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             statistics.nOfBytesllcloseReceived+=5;
             statistics.nOfPacketsllcloseReceived++;
             
-            printf("\nfinal open\n");
+            printf("\nFinal open\n");
             FILE *fp = fopen( originalFileName , "wb" );
             if (fp==NULL) {
                 perror("Connection error\n");
@@ -134,7 +134,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
     }
     if(llclose(1)){
-        printf("Closing failiure\n");
+        printf("Closing failure\n");
         exit(-1);
     }
 }
@@ -143,9 +143,7 @@ unsigned char* createControlPacket(unsigned int c, int filesize, const char* fil
 
     int decimalNumber = filesize;
     char hexadecimalString[10];
-    printf("\n\n");
     sprintf(hexadecimalString, "%x", decimalNumber);
-    printf("Hexadecimal: %s\n\n",hexadecimalString);
     int count = 0;
     while(hexadecimalString[count]!='\0'){
         count++;
@@ -169,9 +167,6 @@ unsigned char* createControlPacket(unsigned int c, int filesize, const char* fil
     packet[2+L1+2] = L2;
     int offset = 2 + L1 + 1 + 1 + 1; // need the offset of the V2 field for the memcpy
     memcpy(packet + offset, filename, L2);
-    for(int i=0;i<offset+L2;i++){
-        printf("packet char = 0x%02X\n",packet[i]);
-    }
     return packet;
 }
 
