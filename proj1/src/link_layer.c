@@ -738,18 +738,18 @@ int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf)
 int changeFrame(unsigned char* frame, int frameSize, int probability, int *index){
     
     *index = rand() % (frameSize);
-    int saved = frame[*index];
+    int originalByte = frame[*index];
     int change = rand() % (101);
     if(change < probability){
         frame[*index] ^= 0xFF;
-        printf("Caused an artificial error at packet[%d] from %02X to %02X\n", *index, saved, frame[*index]);
-        return saved;
+        printf("Caused an artificial error at packet[%d] from %02X to %02X\n", *index, originalByte, frame[*index]);
+        return originalByte;
     }
     return -1;
 }
 
-int changeFrameBack(unsigned char* frame, int index, int saved){
-    frame[index] = saved;
+int changeFrameBack(unsigned char* frame, int index, int originalByte){
+    frame[index] = originalByte;
     printf("The error was changed back at packet[%d] to %02X\n", index, frame[index]);
     return 0;
 }

@@ -78,7 +78,6 @@ typedef enum{
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
-//#define BAUDRATE B19200
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 // MISC
@@ -99,10 +98,6 @@ typedef enum{
 
 #define T_PROP 0.1
 #define PROBABILITY 0
-
-
-speed_t getBaudRate(int baud);
-
 
 // Abre a conexão entre os dois computadores utilizando os parâmetros definidos na struct linkLayer.
 // Retorna 1 em caso de sucesso e -1 em caso de erro.
@@ -135,8 +130,15 @@ int writeSupervisionFrame(unsigned char A, unsigned char C);
 // Realiza Byte Stuffing no buffer
 int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf);
 
-int changeFrame(unsigned char * frame, int size, int probability, int * idx);
+// Cria um erro no pacote para testar artificialmente a FER
+// Retorna o byte que foi alterado em caso de sucesso, -1 em caso de erro
+int changeFrame(unsigned char* frame, int frameSize, int probability, int* index);
 
-int changeFrameBack(unsigned char * frame, int idx, int saved);
+// Retira o erro artificial criado no pacote
+int changeFrameBack(unsigned char* frame, int index, int originalByte);
+
+// Recebe um inteiro que representa a baudrate e retorna o valor correspondente em speed_t.
+// Retorna -1 caso não receba um valor válido.
+speed_t getBaudRate(int baud);
 
 #endif // _LINK_LAYER_H_
