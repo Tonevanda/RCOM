@@ -13,6 +13,9 @@ LinkLayer connectionParam;
 Statistics statistics;
 struct timeval begin, end;
 int v;
+struct termios oldtio;
+struct termios newtio;
+int filePort;
 
 ////////////////////////////////////////////////
 // LLOPEN
@@ -629,19 +632,17 @@ int llclose(int showStatistics){
 int connect(const char *serialPort){
     // Open serial port device for reading and writing and not as controlling tty
     // because we don't want to get killed if linenoise sends CTRL-C.
-    int file = open(serialPort, O_RDWR | O_NOCTTY);
+    filePort = open(serialPort, O_RDWR | O_NOCTTY);
     printf("connected\n");
-    if (file < 0)
+    if (filePort < 0)
     {
         perror(serialPort);
         exit(-1);
     }
 
-    struct termios oldtio;
-    struct termios newtio;
 
     // Save current port settings
-    if (tcgetattr(file, &oldtio) == -1)
+    if (tcgetattr(filePort, &oldtio) == -1)
     {
         perror("tcgetattr");
         exit(-1);
@@ -666,10 +667,10 @@ int connect(const char *serialPort){
     // by file but not transmitted, or data received but not read,
     // depending on the value of queue_selector:
     //   TCIFLUSH - flushes data received but not read.
-    tcflush(file, TCIOFLUSH);
+    tcflush(filePort, TCIOFLUSH);
 
     // Set new port settings
-    if (tcsetattr(file, TCSANOW, &newtio) == -1)
+    if (tcsetattr(filePort, TCSANOW, &newtio) == -1)
     {
         perror("tcsetattr");
         exit(-1);
@@ -677,7 +678,7 @@ int connect(const char *serialPort){
 
     printf("New termios structure set\n");
 
-    return file;
+    return filePort;
 }
 
 void alarmHandler(int signal){
