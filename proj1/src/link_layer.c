@@ -22,7 +22,7 @@ int filePort;
 ////////////////////////////////////////////////
 int llopen(LinkLayer connectionParameters){
     gettimeofday(&begin, NULL);
-    printf("llopen start\n\n");
+    printf("llopen start\n");
 
     statistics.nOfTimeouts=0;
 
@@ -94,13 +94,13 @@ int llopen(LinkLayer connectionParameters){
                     }
                 }
             }
+            if(nRetransmissions==0){
+                printf("Ending execution due to timeout\n");
+                exit(-1);
+            }
             nRetransmissions = connectionParameters.nRetransmissions;
             alarmEnabled=FALSE;
             alarm(0); 
-            if(nRetransmissions==0){
-                printf("MASSIVE failure");
-                exit(-1);
-            }
             break;
         }
 
@@ -136,7 +136,7 @@ int llopen(LinkLayer connectionParameters){
         }
     }
     STOP = FALSE;
-    printf("\n\nllopen success\n\n");
+    printf("LLOpen success\n");
     return 0;
 }
 
@@ -144,7 +144,7 @@ int llopen(LinkLayer connectionParameters){
 // LLWRITE
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize){
-    printf("llwrite start\n\n");
+    printf("LLWrite start\n");
     
     State state = FIRSTFLAG;
     unsigned char* buf_write = (unsigned char*) malloc((bufSize*2)+8);;
@@ -254,7 +254,7 @@ int llwrite(const unsigned char *buf, int bufSize){
 ////////////////////////////////////////////////
 int llread(unsigned char *output)
 {
-    printf("LLRead start\n\n");
+    printf("LLRead start\n");
     unsigned char buf_read[2] = {0};
     int responseFrame=0;
     int currentIndex=0;
@@ -391,7 +391,7 @@ int llread(unsigned char *output)
 // LLCLOSE
 ////////////////////////////////////////////////
 int llclose(int showStatistics){
-    printf("LLClose start\n\n");
+    printf("LLClose start\n");
 
     unsigned char buf_read[2] = {0};
 
@@ -434,7 +434,7 @@ int llclose(int showStatistics){
                             statistics.nOfPacketsllcloseReceived++;
                             nRetransmissions = -1;
                             alarmEnabled=FALSE;
-                            printf("Success");
+                            printf("Success\n");
                             state=SUCCESS;
                         }
                         else if (state==FAILURE){
@@ -529,7 +529,7 @@ int llclose(int showStatistics){
                     else if(state == FINALFLAG && buf_read[0] == FLAG){
                         if(cField==UA){
                             STOP=TRUE;
-                            printf("success");
+                            printf("Success\n");
                             statistics.nOfPacketsllcloseReceived++;
                         }
                         else{
@@ -623,7 +623,7 @@ int connect(const char *serialPort){
     // Open serial port device for reading and writing and not as controlling tty
     // because we don't want to get killed if linenoise sends CTRL-C.
     filePort = open(serialPort, O_RDWR | O_NOCTTY);
-    printf("connected\n");
+    printf("Connected\n");
     if (filePort < 0)
     {
         perror(serialPort);

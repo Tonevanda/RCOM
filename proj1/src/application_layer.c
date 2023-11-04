@@ -123,7 +123,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             statistics.nOfBytesllcloseReceived+=5;
             statistics.nOfPacketsllcloseReceived++;
             
-            printf("\nFinal open\n");
+            printf("Final open\n");
             FILE *fp = fopen( originalFileName , "wb" );
             if (fp==NULL) {
                 perror("Connection error\n");
