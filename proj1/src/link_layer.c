@@ -73,7 +73,6 @@ int llopen(LinkLayer connectionParameters){
                     int bytesRead = read(fd, buf_read, 1);
                     if(bytesRead!=0){
                         statistics.nOfBytesllopenReceived++;
-                        printf("char= 0x%02X | state= %d\n", buf_read[0], state);
                         if (state != FINALFLAG && buf_read[0] == FLAG) {
                             state = A;
                         }
@@ -110,8 +109,6 @@ int llopen(LinkLayer connectionParameters){
                 int bytesRead = read(fd, buf_read, 1);
                 if(bytesRead!=0){
                     statistics.nOfBytesllopenReceived++;
-                    printf("char= 0x%02X | state= %d\n", buf_read[0], state);
-
                     if(state != FINALFLAG && buf_read[0]==FLAG){
                         state = A;
                     }
@@ -269,11 +266,6 @@ int llread(unsigned char *output)
         int bytesRead = read(fd, buf_read, 1);
         if(bytesRead!=0){
             statistics.nOfBytesllreadReceived++;
-            /*
-            if(state != DATA){
-                printf("char= 0x%02X | state= %d\n", buf_read[0], state);
-            }
-            */
             if(state!=DATA && state!=FINALFLAG && buf_read[0] == FLAG){
                 state = A;
             }
@@ -301,14 +293,6 @@ int llread(unsigned char *output)
                 }
             }
             else if(state == DATA){
-                /*
-                if(bytesRead == 0){
-                    printf("char= 0x%02X | ", buf_read[0]);
-                    printf("bcc2Field= 0x%02X ", bcc2Field);
-                    printf("from= 0x%02X | ", output[currentIndex-2]);
-                    printf("state= %d\n",state);
-                }
-                */
                 if(currentIndex!=0 && buf_read[0]==0x5E && output[currentIndex-1]==0x7D){
                     output[currentIndex-1]=0x7E;
                     bcc2Field ^= output[currentIndex-2];
@@ -433,7 +417,6 @@ int llclose(int showStatistics){
                     int bytesRead = read(fd, buf_read, 1);
                     if(bytesRead!=0){
                         statistics.nOfBytesllcloseReceived++;
-                        //printf("char= 0x%02X | state= %d\n", buf_read[0], state);
                         if (state != FINALFLAG && buf_read[0] == FLAG) {
                             state = A;
                         }
@@ -529,7 +512,6 @@ int llclose(int showStatistics){
                 int bytesRead = read(fd, buf_read, 1);
                 if(bytesRead!=0){
                     statistics.nOfBytesllcloseReceived++;
-                    //printf("char= 0x%02X | state= %d\n", buf_read[0], state);
                     if(state != FINALFLAG && buf_read[0] == FLAG){
                         state = A;
                     }
@@ -731,7 +713,6 @@ int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf)
         } 
         bcc2Field^=buf[i];
     }
-    printf("bcc2Field= 0x%02X\n", bcc2Field);
     if(bcc2Field==0x7E){
         buf_write[*bufSize+offset] = 0x7D;
         offset++;
@@ -770,7 +751,7 @@ int changeFrame(unsigned char* frame, int frameSize, int probability, int *index
 
 int changeFrameBack(unsigned char* frame, int index, int saved){
     frame[index] = saved;
-    printf("The error was eliminated at packet[%d] to %02X\n", index, frame[index]);
+    printf("The error was changed back at packet[%d] to %02X\n", index, frame[index]);
     return 0;
 }
 
