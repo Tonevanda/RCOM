@@ -180,7 +180,6 @@ int llwrite(const unsigned char *buf, int bufSize){
             int bytesRead = read(fd, buf_read, 1);
             if (bytesRead!=0){
                 statistics.nOfBytesllwriteReceived++;
-                printf("char= 0x%02X | state= %d\n", buf_read[0], state);
                 if (state != FINALFLAG && buf_read[0] == FLAG) {
                     state = A;
                 }
@@ -195,7 +194,6 @@ int llwrite(const unsigned char *buf, int bufSize){
                     state = FINALFLAG;
                 } 
                 else if (state == FINALFLAG && buf_read[0] == FLAG) {
-                    printf("Entered FINALFLAG state\n");
                     if (cField == UA) {
                         state = SUCCESS;
                     }
@@ -206,7 +204,7 @@ int llwrite(const unsigned char *buf, int bufSize){
                         else{
                             frame = FRAME0;
                             state = SUCCESS;
-                            printf("Got success in RR0");
+                            printf("Got success in RR0\n");
                         }
                     }
                     else if (cField == RR1) {
@@ -216,7 +214,7 @@ int llwrite(const unsigned char *buf, int bufSize){
                         else{
                             frame = FRAME1;
                             state = SUCCESS;
-                            printf("Got success in RR1");
+                            printf("Got success in RR1\n");
                         }
                     }
                     else if (cField == REJ0 || cField == REJ1 || cField == DISC) {
@@ -230,26 +228,27 @@ int llwrite(const unsigned char *buf, int bufSize){
                 alarmEnabled=FALSE;
                 nRetransmissions=-1;
                 statistics.nOfPacketsllwriteReceived++;
-                printf("final transfer complete\n");
+                printf("Final transfer complete\n");
             }
             else if (state==FAILURE){
                 STOP = TRUE;
-                printf("rej recieved or failiure in the response frame\n");
+                printf("Received REJ or failure in the response frame\n");
                 alarmEnabled=FALSE;
                 state=FIRSTFLAG;
                 nRetransmissions = connectionParam.nRetransmissions;
             }
         }
     }
+    // End execution at the end of the number of tries
+    if(nRetransmissions==0){
+        printf("Ending execution due to timeout\n");
+        exit(-1);
+    }
     nRetransmissions = connectionParam.nRetransmissions;
     alarmEnabled=FALSE;
     alarm(0);
     STOP=FALSE;
-    if(nRetransmissions==0){
-        printf("MASSIVE failure");
-        exit(-1);
-    }
-    printf("\n\nllwrite success\n\n");
+    printf("\n\nLLWrite successful\n\n");
     return 0;
 }
 
@@ -258,7 +257,7 @@ int llwrite(const unsigned char *buf, int bufSize){
 ////////////////////////////////////////////////
 int llread(unsigned char *output)
 {
-    printf("llread start\n\n");
+    printf("LLRead start\n\n");
     unsigned char buf_read[2] = {0};
     int responseFrame=0;
     int currentIndex=0;
@@ -270,9 +269,11 @@ int llread(unsigned char *output)
         int bytesRead = read(fd, buf_read, 1);
         if(bytesRead!=0){
             statistics.nOfBytesllreadReceived++;
+            /*
             if(state != DATA){
                 printf("char= 0x%02X | state= %d\n", buf_read[0], state);
             }
+            */
             if(state!=DATA && state!=FINALFLAG && buf_read[0] == FLAG){
                 state = A;
             }
@@ -292,7 +293,7 @@ int llread(unsigned char *output)
                 }
                 else if (cField==SET)
                 {
-                    printf("transmiter stuck in llopen :(\n");
+                    printf("Transmitter stuck in LLOpen\n");
                     state=FINALFLAG;
                 }
                 else{
@@ -300,13 +301,14 @@ int llread(unsigned char *output)
                 }
             }
             else if(state == DATA){
-                //remove if bellow to print all data bytes
+                /*
                 if(bytesRead == 0){
                     printf("char= 0x%02X | ", buf_read[0]);
                     printf("bcc2Field= 0x%02X ", bcc2Field);
                     printf("from= 0x%02X | ", output[currentIndex-2]);
                     printf("state= %d\n",state);
                 }
+                */
                 if(currentIndex!=0 && buf_read[0]==0x5E && output[currentIndex-1]==0x7D){
                     output[currentIndex-1]=0x7E;
                     bcc2Field ^= output[currentIndex-2];
@@ -329,7 +331,6 @@ int llread(unsigned char *output)
                     }
                 }
                 if(buf_read[0] == FLAG) {
-                    printf("char = 0x%02X | bcc2Field = 0x%02X | output[firstDataByte-1] = 0x%02X | state = %d | number of bytes received = %-d", buf_read[0],bcc2Field,output[currentIndex-1],state,statistics.nOfBytesllreadReceived);
                     if(bcc2Field==output[currentIndex-1]){
                         state = SUCCESS; 
                         output[currentIndex-1]=0;
@@ -371,7 +372,7 @@ int llread(unsigned char *output)
                 responseFrame = RR0;
             }
             int bytes =writeSupervisionFrame(0x03, responseFrame);
-            printf("sucsess frame sent with 0x%02X\n",responseFrame);
+            printf("Success frame sent with 0x%02X\n",responseFrame);
             statistics.nOfPacketsllreadReceived++;
             statistics.nOfBytesllreadSent+=bytes;
             statistics.nOfPacketsllreadSent++;
@@ -386,7 +387,7 @@ int llread(unsigned char *output)
                 responseFrame = REJ1;
             }
             writeSupervisionFrame(0x03, responseFrame);
-            printf("failure frame sent with 0x%02X\n",responseFrame);
+            printf("Failure frame sent with 0x%02X\n",responseFrame);
             statistics.nOfREJSent++;
             bcc2Field=0x00;
             currentIndex=0;
@@ -398,7 +399,7 @@ int llread(unsigned char *output)
         }
     }
     STOP=FALSE;
-    printf("llread success\n\n");
+    printf("LLRead successful\n\n");
     return bufSize;
 }
 
@@ -406,7 +407,7 @@ int llread(unsigned char *output)
 // LLCLOSE
 ////////////////////////////////////////////////
 int llclose(int showStatistics){
-    printf("llclose start\n\n");
+    printf("LLClose start\n\n");
 
     unsigned char buf_read[2] = {0};
 
@@ -432,7 +433,7 @@ int llclose(int showStatistics){
                     int bytesRead = read(fd, buf_read, 1);
                     if(bytesRead!=0){
                         statistics.nOfBytesllcloseReceived++;
-                        printf("char= 0x%02X | state= %d\n", buf_read[0], state);
+                        //printf("char= 0x%02X | state= %d\n", buf_read[0], state);
                         if (state != FINALFLAG && buf_read[0] == FLAG) {
                             state = A;
                         }
@@ -450,7 +451,7 @@ int llclose(int showStatistics){
                             statistics.nOfPacketsllcloseReceived++;
                             nRetransmissions = -1;
                             alarmEnabled=FALSE;
-                            printf("success");
+                            printf("Success");
                             state=SUCCESS;
                         }
                         else if (state==FAILURE){
@@ -465,13 +466,13 @@ int llclose(int showStatistics){
             int bytes = writeSupervisionFrame(0x01,UA);
             statistics.nOfBytesllcloseSent+=bytes;
             statistics.nOfPacketsllcloseSent++;
-            nRetransmissions = connectionParam.nRetransmissions;
             if(nRetransmissions==0){
-                printf("MASSIVE failure");
+                printf("Ending execution due to timeout\n");
                 exit(-1);
             }
+            nRetransmissions = connectionParam.nRetransmissions;
             else{
-                printf("\n\nllclose success\n\n");
+                printf("\n\nLLClose successful\n\n");
             }
             if(showStatistics){
                 gettimeofday(&end, NULL);
@@ -528,7 +529,7 @@ int llclose(int showStatistics){
                 int bytesRead = read(fd, buf_read, 1);
                 if(bytesRead!=0){
                     statistics.nOfBytesllcloseReceived++;
-                    printf("char= 0x%02X | state= %d\n", buf_read[0], state);
+                    //printf("char= 0x%02X | state= %d\n", buf_read[0], state);
                     if(state != FINALFLAG && buf_read[0] == FLAG){
                         state = A;
                     }
@@ -560,10 +561,10 @@ int llclose(int showStatistics){
                 }
             }
             if(nRetransmissions==0){
-                printf("llclose finished due to timeout\n");
+                printf("LLClose finished due to timeout\n");
             }
             else{
-                printf("\n\nllclose success\n\n");
+                printf("\n\nLLClose success\n\n");
             }
             if(showStatistics){
                 gettimeofday(&end, NULL);
