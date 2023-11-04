@@ -88,6 +88,198 @@ struct termios oldtio;
 struct termios newtio;
 int filePort;
 
+
+int connect(const char *serialPort){
+    // Open serial port device for reading and writing and not as controlling tty
+    // because we don't want to get killed if linenoise sends CTRL-C.
+    filePort = open(serialPort, O_RDWR | O_NOCTTY);
+    printf("Connected\n");
+    if (filePort < 0)
+    {
+        perror(serialPort);
+        exit(-1);
+    }
+
+
+    // Save current port settings
+    if (tcgetattr(filePort, &oldtio) == -1)
+    {
+        perror("tcgetattr");
+        exit(-1);
+    }
+
+    // Clear struct for new port settings
+    memset(&newtio, 0, sizeof(newtio));
+
+    newtio.c_cflag = getBaudRate(connectionParam.baudRate) | CS8 | CLOCAL | CREAD;
+    newtio.c_iflag = IGNPAR;
+    newtio.c_oflag = 0;
+
+    // Set input mode (non-canonical, no echo,...)
+    newtio.c_lflag = 0;
+    newtio.c_cc[VTIME] = 0.1; // Inter-character timer unused
+    newtio.c_cc[VMIN] = 0;  // Blocking read until 5 chars received
+
+    // VTIME e VMIN should be changed in order to protect with a
+    // timeout the reception of the following character(s)
+    // Now clean the line and activate the settings for the port
+    // tcflush() discards data written to the object referred to
+    // by file but not transmitted, or data received but not read,
+    // depending on the value of queue_selector:
+    //   TCIFLUSH - flushes data received but not read.
+    tcflush(filePort, TCIOFLUSH);
+
+    // Set new port settings
+    if (tcsetattr(filePort, TCSANOW, &newtio) == -1)
+    {
+        perror("tcsetattr");
+        exit(-1);
+    }
+
+    printf("New termios structure set\n");
+
+    return filePort;
+}
+
+void alarmHandler(int signal){
+    alarmEnabled = FALSE;
+    nRetransmissions--;
+    statistics.nOfTimeouts++;
+    STOP=TRUE;
+    printf("Alarm #%d\n", nRetransmissions);
+}
+
+int writeSupervisionFrame(unsigned char A, unsigned char C){
+    unsigned char supervisionFrame[5] = {FLAG, A, C, A ^ C, FLAG};
+    int bytesWritten = 0;
+    if((bytesWritten = write(fd, supervisionFrame, 5)) < 0) return -1;
+    sleep(1);
+    return bytesWritten;
+}
+
+int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf){
+    buf_write[0] = FLAG;
+    buf_write[1] = 0x03;
+    buf_write[2] = frame;
+    buf_write[3] = buf_write[1] ^ buf_write[2];
+    int offset=4;
+    unsigned char bcc2Field=0x00;
+    for(int i=0;i<*bufSize;i++){
+        if(buf[i]==0x7E){
+            buf_write[i+offset]=0x7D;
+            offset++;
+            buf_write[i+offset]=0x5E;
+            statistics.nOfCharStuffed++;
+        }
+        else if (buf[i]==0x7D)
+        {
+            buf_write[i+offset]=0x7D;
+            offset++;
+            buf_write[i+offset]=0x5D;
+            statistics.nOfCharStuffed++;
+        }
+        else{
+            buf_write[i+offset]=buf[i];
+        } 
+        bcc2Field^=buf[i];
+    }
+    if(bcc2Field==0x7E){
+        buf_write[*bufSize+offset] = 0x7D;
+        offset++;
+        buf_write[*bufSize+offset] = 0x5E;
+        statistics.nOfCharStuffed++;
+    }
+    else if (bcc2Field==0x7D)
+    {
+        buf_write[*bufSize+offset] = 0x7D;
+        offset++;
+        buf_write[*bufSize+offset] = 0x5D;
+        statistics.nOfCharStuffed++;
+    }
+    else{
+        buf_write[*bufSize+offset] = bcc2Field;
+    }
+    offset++;
+    buf_write[*bufSize+offset] = FLAG;
+    offset++;
+    *bufSize+=offset;
+    return 0;
+}
+
+int changeFrame(unsigned char* frame, int frameSize, int probability, int *index){
+    
+    *index = rand() % (frameSize);
+    int originalByte = frame[*index];
+    int change = rand() % (101);
+    if(change < probability){
+        frame[*index] ^= 0xFF;
+        printf("Caused an artificial error at packet[%d] from %02X to %02X\n", *index, originalByte, frame[*index]);
+        return originalByte;
+    }
+    return -1;
+}
+
+int changeFrameBack(unsigned char* frame, int index, int originalByte){
+    frame[index] = originalByte;
+    printf("The error was changed back at packet[%d] to %02X\n", index, frame[index]);
+    return 0;
+}
+
+speed_t getBaudRate(int baud){
+    switch (baud) {
+        case 110:
+            return B110;
+        case 300:
+            return B300;
+        case 600:
+            return B600;
+        case 1200:
+            return B1200;
+        case 2400:
+            return B2400;
+        case 4800:
+            return B4800;
+        case 9600:
+            return B9600;
+        case 19200:
+            return B19200;
+        case 38400:
+            return B38400;
+        case 57600:
+            return B57600;
+        case 115200:
+            return B115200;
+        case 230400:
+            return B230400;
+        case 460800:
+            return B460800;
+        case 500000:
+            return B500000;
+        case 576000:
+            return B576000;
+        case 921600:
+            return B921600;
+        case 1000000:
+            return B1000000;
+        case 1152000:
+            return B1152000;
+        case 1500000:
+            return B1500000;
+        case 2000000:
+            return B2000000;
+        case 2500000:
+            return B2500000;
+        case 3000000:
+            return B3000000;
+        case 3500000:
+            return B3500000;
+        case 4000000:
+            return B4000000;
+        default: 
+            return -1;
+    }
+}
+
 ////////////////////////////////////////////////
 // LLOPEN
 ////////////////////////////////////////////////
@@ -686,196 +878,4 @@ int llclose(int showStatistics){
     }
     close(fd); //closes the serial port
     return 0;
-}
-
-
-int connect(const char *serialPort){
-    // Open serial port device for reading and writing and not as controlling tty
-    // because we don't want to get killed if linenoise sends CTRL-C.
-    filePort = open(serialPort, O_RDWR | O_NOCTTY);
-    printf("Connected\n");
-    if (filePort < 0)
-    {
-        perror(serialPort);
-        exit(-1);
-    }
-
-
-    // Save current port settings
-    if (tcgetattr(filePort, &oldtio) == -1)
-    {
-        perror("tcgetattr");
-        exit(-1);
-    }
-
-    // Clear struct for new port settings
-    memset(&newtio, 0, sizeof(newtio));
-
-    newtio.c_cflag = getBaudRate(connectionParam.baudRate) | CS8 | CLOCAL | CREAD;
-    newtio.c_iflag = IGNPAR;
-    newtio.c_oflag = 0;
-
-    // Set input mode (non-canonical, no echo,...)
-    newtio.c_lflag = 0;
-    newtio.c_cc[VTIME] = 0.1; // Inter-character timer unused
-    newtio.c_cc[VMIN] = 0;  // Blocking read until 5 chars received
-
-    // VTIME e VMIN should be changed in order to protect with a
-    // timeout the reception of the following character(s)
-    // Now clean the line and activate the settings for the port
-    // tcflush() discards data written to the object referred to
-    // by file but not transmitted, or data received but not read,
-    // depending on the value of queue_selector:
-    //   TCIFLUSH - flushes data received but not read.
-    tcflush(filePort, TCIOFLUSH);
-
-    // Set new port settings
-    if (tcsetattr(filePort, TCSANOW, &newtio) == -1)
-    {
-        perror("tcsetattr");
-        exit(-1);
-    }
-
-    printf("New termios structure set\n");
-
-    return filePort;
-}
-
-void alarmHandler(int signal){
-    alarmEnabled = FALSE;
-    nRetransmissions--;
-    statistics.nOfTimeouts++;
-    STOP=TRUE;
-    printf("Alarm #%d\n", nRetransmissions);
-}
-
-int writeSupervisionFrame(unsigned char A, unsigned char C){
-    unsigned char supervisionFrame[5] = {FLAG, A, C, A ^ C, FLAG};
-    int bytesWritten = 0;
-    if((bytesWritten = write(fd, supervisionFrame, 5)) < 0) return -1;
-    sleep(1);
-    return bytesWritten;
-}
-
-int stuffBytes(unsigned char *buf_write, int *bufSize, const unsigned char *buf){
-    buf_write[0] = FLAG;
-    buf_write[1] = 0x03;
-    buf_write[2] = frame;
-    buf_write[3] = buf_write[1] ^ buf_write[2];
-    int offset=4;
-    unsigned char bcc2Field=0x00;
-    for(int i=0;i<*bufSize;i++){
-        if(buf[i]==0x7E){
-            buf_write[i+offset]=0x7D;
-            offset++;
-            buf_write[i+offset]=0x5E;
-            statistics.nOfCharStuffed++;
-        }
-        else if (buf[i]==0x7D)
-        {
-            buf_write[i+offset]=0x7D;
-            offset++;
-            buf_write[i+offset]=0x5D;
-            statistics.nOfCharStuffed++;
-        }
-        else{
-            buf_write[i+offset]=buf[i];
-        } 
-        bcc2Field^=buf[i];
-    }
-    if(bcc2Field==0x7E){
-        buf_write[*bufSize+offset] = 0x7D;
-        offset++;
-        buf_write[*bufSize+offset] = 0x5E;
-        statistics.nOfCharStuffed++;
-    }
-    else if (bcc2Field==0x7D)
-    {
-        buf_write[*bufSize+offset] = 0x7D;
-        offset++;
-        buf_write[*bufSize+offset] = 0x5D;
-        statistics.nOfCharStuffed++;
-    }
-    else{
-        buf_write[*bufSize+offset] = bcc2Field;
-    }
-    offset++;
-    buf_write[*bufSize+offset] = FLAG;
-    offset++;
-    *bufSize+=offset;
-    return 0;
-}
-
-int changeFrame(unsigned char* frame, int frameSize, int probability, int *index){
-    
-    *index = rand() % (frameSize);
-    int originalByte = frame[*index];
-    int change = rand() % (101);
-    if(change < probability){
-        frame[*index] ^= 0xFF;
-        printf("Caused an artificial error at packet[%d] from %02X to %02X\n", *index, originalByte, frame[*index]);
-        return originalByte;
-    }
-    return -1;
-}
-
-int changeFrameBack(unsigned char* frame, int index, int originalByte){
-    frame[index] = originalByte;
-    printf("The error was changed back at packet[%d] to %02X\n", index, frame[index]);
-    return 0;
-}
-
-speed_t getBaudRate(int baud){
-    switch (baud) {
-        case 110:
-            return B110;
-        case 300:
-            return B300;
-        case 600:
-            return B600;
-        case 1200:
-            return B1200;
-        case 2400:
-            return B2400;
-        case 4800:
-            return B4800;
-        case 9600:
-            return B9600;
-        case 19200:
-            return B19200;
-        case 38400:
-            return B38400;
-        case 57600:
-            return B57600;
-        case 115200:
-            return B115200;
-        case 230400:
-            return B230400;
-        case 460800:
-            return B460800;
-        case 500000:
-            return B500000;
-        case 576000:
-            return B576000;
-        case 921600:
-            return B921600;
-        case 1000000:
-            return B1000000;
-        case 1152000:
-            return B1152000;
-        case 1500000:
-            return B1500000;
-        case 2000000:
-            return B2000000;
-        case 2500000:
-            return B2500000;
-        case 3000000:
-            return B3000000;
-        case 3500000:
-            return B3500000;
-        case 4000000:
-            return B4000000;
-        default: 
-            return -1;
-    }
 }
