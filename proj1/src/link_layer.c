@@ -470,10 +470,10 @@ int llclose(int showStatistics){
                 printf("Ending execution due to timeout\n");
                 exit(-1);
             }
-            nRetransmissions = connectionParam.nRetransmissions;
             else{
                 printf("\n\nLLClose successful\n\n");
             }
+            nRetransmissions = connectionParam.nRetransmissions;
             if(showStatistics){
                 gettimeofday(&end, NULL);
                 double time_spent = (end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec) / 1000000.0;
