@@ -1,7 +1,78 @@
 // Link layer protocol implementation
 
 #include "link_layer.h"
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <termios.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
+#include <signal.h>
 
+typedef struct
+{
+    int nOfTimeouts;
+
+    int nOfBytesllopenSent;
+    int nOfPacketsllopenSent;
+    int nOfBytesllopenReceived;
+    int nOfPacketsllopenReceived; 
+
+    int nOfBytesllwriteSent;
+    int nOfPacketsllwriteSent;
+    int nOfBytesllwriteReceived;
+    int nOfPacketsllwriteReceived;
+    int nOfCharStuffed;
+
+    int nOfBytesllreadSent;
+    int nOfPacketsllreadSent;
+    int nOfBytesllreadReceived;
+    int nOfPacketsllreadReceived;
+    int nOfREJSent;
+    int nOfCharDestuffed;
+
+    int nOfBytesllcloseSent;
+    int nOfPacketsllcloseSent;
+    int nOfBytesllcloseReceived;
+    int nOfPacketsllcloseReceived;
+} Statistics;
+
+// Baudrate settings are defined in <asm/termbits.h>, which is
+// included by <termios.h>
+#define _POSIX_SOURCE 1 // POSIX compliant source
+
+#define BUF_SIZE 256
+
+#define FLAG 0x7E
+#define SET 0x03
+#define UA 0x07
+#define RR0 0x05
+#define RR1 0x85
+#define REJ0 0x01
+#define REJ1 0x81
+#define DISC 0x0B
+#define FRAME0 0x00
+#define FRAME1 0x40
+
+#define T_PROP 0.1
+#define PROBABILITY 0
+
+typedef enum{
+    FIRSTFLAG,      //0
+    A,              //1
+    C,              //2
+    BCC1,           //3
+    DATA,           //4
+    BCC2,           //5
+    FINALFLAG,      //6
+    SUCCESS,        //7
+    FAILURE,        //8
+    DISCONNECTING   //9
+} State;
 
 volatile int STOP = FALSE;
 int alarmEnabled = FALSE;
