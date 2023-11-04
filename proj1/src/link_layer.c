@@ -605,7 +605,7 @@ int llclose(int showStatistics){
                 printf("|----------------------------------------------|\n");
                 printf("| R                                  | %.2lf |\n", r);
                 printf("|----------------------------------------------|\n");
-                printf("| FER                                | %.4lf%% |\n", FER);
+                printf("| FER                                | %.3lf%% |\n", FER);
                 printf("|----------------------------------------------|\n");
                 printf("| Practical efficiency               | %.3lf%% |\n", practical_efficiency);
                 printf("|----------------------------------------------|\n");
