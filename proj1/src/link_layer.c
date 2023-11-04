@@ -624,6 +624,13 @@ int llclose(int showStatistics){
         }
     }
 
+    sleep(1);
+
+    if (tcsetattr(filePort, TCSANOW, &oldtio) == -1)
+    {
+        perror("tcsetattr");
+        exit(-1);
+    }
     close(fd); //closes the serial port
     return 0;
 }
