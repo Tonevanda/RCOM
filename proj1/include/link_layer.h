@@ -70,7 +70,7 @@ typedef enum{
     SUCCESS,        //7
     FAILURE,        //8
     DISCONNECTING   //9
-} State; //expected field
+} State;
 
 // SIZE of maximum acceptable payload.
 // Maximum number of bytes that application layer should send to link layer
@@ -78,7 +78,7 @@ typedef enum{
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
-#define BAUDRATE B19200
+//#define BAUDRATE B19200
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 // MISC
@@ -100,7 +100,8 @@ typedef enum{
 #define T_PROP 0.1
 #define PROBABILITY 0
 
-int getBaudRate(speed_t baud);
+
+speed_t getBaudRate(int baud);
 
 
 // Abre a conexão entre os dois computadores utilizando os parâmetros definidos na struct linkLayer.
