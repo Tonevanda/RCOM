@@ -13,33 +13,6 @@
 #include <sys/time.h>
 #include <signal.h>
 
-typedef struct
-{
-    int nOfTimeouts;
-
-    int nOfBytesllopenSent;
-    int nOfPacketsllopenSent;
-    int nOfBytesllopenReceived;
-    int nOfPacketsllopenReceived; 
-
-    int nOfBytesllwriteSent;
-    int nOfPacketsllwriteSent;
-    int nOfBytesllwriteReceived;
-    int nOfPacketsllwriteReceived;
-    int nOfCharStuffed;
-
-    int nOfBytesllreadSent;
-    int nOfPacketsllreadSent;
-    int nOfBytesllreadReceived;
-    int nOfPacketsllreadReceived;
-    int nOfREJSent;
-    int nOfCharDestuffed;
-
-    int nOfBytesllcloseSent;
-    int nOfPacketsllcloseSent;
-    int nOfBytesllcloseReceived;
-    int nOfPacketsllcloseReceived;
-} Statistics;
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
@@ -73,6 +46,34 @@ typedef enum{
     FAILURE,        //8
     DISCONNECTING   //9
 } State;
+
+typedef struct
+{
+    int nOfTimeouts;
+
+    int nOfBytesllopenSent;
+    int nOfPacketsllopenSent;
+    int nOfBytesllopenReceived;
+    int nOfPacketsllopenReceived; 
+
+    int nOfBytesllwriteSent;
+    int nOfPacketsllwriteSent;
+    int nOfBytesllwriteReceived;
+    int nOfPacketsllwriteReceived;
+    int nOfCharStuffed;
+
+    int nOfBytesllreadSent;
+    int nOfPacketsllreadSent;
+    int nOfBytesllreadReceived;
+    int nOfPacketsllreadReceived;
+    int nOfREJSent;
+    int nOfCharDestuffed;
+
+    int nOfBytesllcloseSent;
+    int nOfPacketsllcloseSent;
+    int nOfBytesllcloseReceived;
+    int nOfPacketsllcloseReceived;
+} Statistics;
 
 volatile int STOP = FALSE;
 int alarmEnabled = FALSE;
