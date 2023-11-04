@@ -225,7 +225,6 @@ int llwrite(const unsigned char *buf, int bufSize){
                 alarmEnabled=FALSE;
                 nRetransmissions=-1;
                 statistics.nOfPacketsllwriteReceived++;
-                printf("Final transfer complete\n");
             }
             else if (state==FAILURE){
                 STOP = TRUE;
