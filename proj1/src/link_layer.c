@@ -766,7 +766,7 @@ int llclose(int showStatistics){
             statistics.nOfPacketsllcloseSent++;
             nRetransmissions = 1;
             if (!alarmEnabled){  
-                alarm(7);
+                alarm(connectionParam.timeout);
                 alarmEnabled = TRUE;
                 statistics.nOfBytesllcloseSent+=bytes;
                 statistics.nOfPacketsllcloseSent++;
