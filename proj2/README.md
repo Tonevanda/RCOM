@@ -22,13 +22,13 @@ Primeiramente mudamos para o Tux24, depois temos que abrir o **GTKTerm**, mudar 
 Com isto feito, abrimos o terminal e escrevemos:
 
 ```shell
-ifconfig eth0 172.16.20.1/24
+ifconfig eth0 172.16.20.254/24
 ```
 
 No Tux23 fazemos o mesmo, mas com este comando:
 
 ```shell
-ifconfig eth0 172.16.20.254/24
+ifconfig eth0 172.16.20.1/24
 ```
 
 Podemos fazer ping para confirmar se estão conectados da seguinte forma (no Tux23):
@@ -105,7 +105,7 @@ Primeiramente, vamos para o Tux22 para configurar e registar os endereços de IP
 ifconfig eth0 172.16.21.1/24
 ```
 
-Depois, temos que criar uma bridge que conecta o Tux23 e o Tux24. Para fazer isso temos que fazer o seguinte no terminal:
+Depois, temos que criar uma bridge que conecta o Tux23 e o Tux24. Para fazer isso temos que fazer o seguinte no **GTKTerm**:
 
 ```shell
 interface bridge add name=bridgeY0
@@ -140,3 +140,55 @@ Route:
     - Ref: 0
     - Use: 0
     - Iface: eth0
+
+
+## EXP 3
+
+Esta experiência é semelhante à anterior, a única diferença é que o Tux23 será ligado à bridge Y1.<br>
+Para fazer isso, temos que fazer o seguinte:
+
+Inicialmente, criar uma bridge que conecta o Tux23 e o Tux24:
+
+```shell
+interface bridge add name=bridgeY0
+interface bridge port remove [find interface=ether3]
+interface bridge port remove [find interface=ether4]
+interface bridge port add bridge=bridgeY0 interface=ether3
+interface bridge port add bridge=bridgeY0 interface=ether4
+```
+
+Agora temos que criar uma bridge que conecta o Tux22 e o Tux24:
+
+```shell
+interface bridge add name=bridgeY1
+interface bridge port remove [find interface=ether2]
+interface bridge port remove [find interface=ether5]
+interface bridge port add bridge=bridgeY1 interface=ether2
+interface bridge port add bridge=bridgeY1 interface=ether5
+```
+
+Agora configurar a outra interface do Tux24 para acomodar a ligação ao Tux22:
+
+```shell
+ifconfig eth1 172.16.21.253/24
+```
+
+Precisamos, também, de adicionar uma rota entre o Tux22 e o Tux23.
+
+No Tux 22 fazemos o seguinte:
+
+```shell
+route add -net 172.16.20.0/24 gw 172.16.21.253
+```
+
+Onde `172.16.20.0/24` é a rede do destino (Tux23 neste caso) e `172.16.21.253` o gateway que servirá de conexão (Tux24 da rede do Tux22, neste caso)
+
+No Tux 23 fazemos o seguinte:
+
+```shell
+route add -net 172.16.21.0/24 gw 172.16.20.254
+```
+
+
+## EXP 4
+
