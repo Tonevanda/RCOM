@@ -40,9 +40,7 @@ int getIP(char* hostname, char* ip){
 
     return 0;
 }
-
-//          ftp://joao:123@ftp.up.pt/pub
-//          ftp://ftp.up.pt/pub   
+ 
 
 int parseString(char string[], char username[], char password[], char hostname[], char path[]){
     State state = INITIAL;
