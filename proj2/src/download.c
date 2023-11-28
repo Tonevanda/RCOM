@@ -3,7 +3,6 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include<arpa/inet.h>
-#include <string.h>
 
 typedef enum{
     INITIAL,    //ftp://
@@ -22,7 +21,7 @@ int getIP(char* hostname, char* ip){
         exit(-1);
     }
 
-    ip = inet_ntoa(*((struct in_addr *) h->h_addr));
+    *ip = inet_ntoa(*((struct in_addr *) h->h_addr));
 
     printf("Host name  : %s\n", h->h_name);
     printf("IP Address : %s\n", ip);
@@ -33,7 +32,7 @@ int getIP(char* hostname, char* ip){
 //          ftp://joao:123@ftp.up.pt/pub
 //          ftp://ftp.up.pt/pub   
 
-int parseString(char string[], char* username, char* password, char* hostname, char* path){
+int parseString(char* string, char* username, char* password, char* hostname, char* path){
     State state = INITIAL;
     int count = 0;
     int usernameCount = 0;
@@ -41,10 +40,7 @@ int parseString(char string[], char* username, char* password, char* hostname, c
     int hostnameCount = 0;
     int pathCount = 0;
     int hostnameIndex = 0;
-    int length = 0;
-    for (int i = 0; string[i] != '\0'; i++){
-        length++;
-    }
+    int length = sizeof(string)/sizeof(char);
     while(count < length){
         switch(state){
             case INITIAL:
@@ -54,15 +50,15 @@ int parseString(char string[], char* username, char* password, char* hostname, c
                 }
                 else{
                     printf("Error parsing string\n");
-                    exit(1);
+                    return -1;
                 }
                 break;
             case HOSTNAME:
                 if(string[count] == '@'){
                     printf("Current Hostname: %s\n", hostname); //Its actually the username and password
                     printf("Current Hostname Count: %d\n", hostnameCount);
-                    memset(hostname, 0, hostnameCount); //Reset the hostname
                     hostnameCount = 0;
+                    memset(hostname, 0, sizeof(hostname)); //Reset the hostname
                     hostnameIndex = count+1;
                     printf("Hostname Index: %d\n", count);
                     count--;
@@ -75,9 +71,7 @@ int parseString(char string[], char* username, char* password, char* hostname, c
                     count++;
                 }
                 else{
-                    printf("Current Hostname: %s\n", hostname);
                     hostname[hostnameCount] = string[count];
-                    printf("Hostname changed to: %s\n", hostname);
                     count++;
                     hostnameCount++;
                 }
@@ -131,8 +125,6 @@ int parseString(char string[], char* username, char* password, char* hostname, c
 }
 
 int main(int argc, char *argv[]){
-    printf("Number of arguments: %d\n", argc);
-    printf("First argument: %s\n", argv[1]);
     if (argc < 2){
         printf("Usage: %s hostname\n", argv[0]);
         exit(1);
