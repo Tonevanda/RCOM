@@ -157,7 +157,8 @@ interface bridge port add bridge=bridgeY0 interface=ether3
 interface bridge port add bridge=bridgeY0 interface=ether4
 ```
 
-Agora temos que criar uma bridge que conecta o Tux22 e o Tux24:
+Depois, temos que criar uma ligação de cabos entre o Tux24 E1 e o Tux22 E0. Para isso ligamos o Tux24 E1 à switch, decidimos ligar ao eth5.
+Agora temos que criar uma bridge que conecta o Tux22 e o Tux24.
 
 ```shell
 interface bridge add name=bridgeY1
@@ -192,3 +193,4 @@ route add -net 172.16.21.0/24 gw 172.16.20.254
 
 ## EXP 4
 
+Primeiramente, temos de conectar o eth1 do **Router Console** ao **P2.1** e conectar o eth2 do **Route Console** a um port na **Switch**. Depois, trocamos o cabo que está ligado ao T4, que inicialmente estava conectado à **Switch**, para termos acesso à **Switch** e dar setup das rotas e bridges, e colocamos no **Route MT**, para termos acesso ao **RC**.
