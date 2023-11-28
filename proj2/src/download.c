@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include<arpa/inet.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdbool.h>
 
 typedef enum{
     INITIAL,    //ftp://
@@ -13,6 +15,16 @@ typedef enum{
 } State;
 
 
+void reverse(char *str) {
+    int i, j;
+    char temp;
+    for (i = 0, j = strlen(str) - 1; i < j; i++, j--) {
+        temp = str[i];
+        str[i] = str[j];
+        str[j] = temp;
+    }
+}
+
 int getIP(char* hostname, char* ip){
     struct hostent *h;
 
@@ -21,7 +33,7 @@ int getIP(char* hostname, char* ip){
         exit(-1);
     }
 
-    *ip = inet_ntoa(*((struct in_addr *) h->h_addr));
+    ip = inet_ntoa(*((struct in_addr *) h->h_addr));
 
     printf("Host name  : %s\n", h->h_name);
     printf("IP Address : %s\n", ip);
@@ -32,7 +44,7 @@ int getIP(char* hostname, char* ip){
 //          ftp://joao:123@ftp.up.pt/pub
 //          ftp://ftp.up.pt/pub   
 
-int parseString(char* string, char* username, char* password, char* hostname, char* path){
+int parseString(char string[], char username[], char password[], char hostname[], char path[]){
     State state = INITIAL;
     int count = 0;
     int usernameCount = 0;
@@ -40,7 +52,12 @@ int parseString(char* string, char* username, char* password, char* hostname, ch
     int hostnameCount = 0;
     int pathCount = 0;
     int hostnameIndex = 0;
-    int length = sizeof(string)/sizeof(char);
+    int length = 0;
+
+    for (int i = 0; string[i] != '\0'; i++){
+        length++;
+    }
+
     while(count < length){
         switch(state){
             case INITIAL:
@@ -49,31 +66,26 @@ int parseString(char* string, char* username, char* password, char* hostname, ch
                     count += 6;
                 }
                 else{
-                    printf("Error parsing string\n");
+                    printf("Error parsing string: %s\n", string);
                     return -1;
                 }
                 break;
             case HOSTNAME:
                 if(string[count] == '@'){
-                    printf("Current Hostname: %s\n", hostname); //Its actually the username and password
-                    printf("Current Hostname Count: %d\n", hostnameCount);
+                    memset(hostname, 0, hostnameCount); //Reset the hostname
                     hostnameCount = 0;
-                    memset(hostname, 0, sizeof(hostname)); //Reset the hostname
                     hostnameIndex = count+1;
-                    printf("Hostname Index: %d\n", count);
                     count--;
                     state = PASSWORD;
                 }
                 else if(string[count] == '/'){
-                    printf("Final Hostname: %s\n", hostname);
-                    printf("Final Hostname Count: %d\n", hostnameCount);
                     state = PATH;
                     count++;
                 }
                 else{
                     hostname[hostnameCount] = string[count];
-                    count++;
                     hostnameCount++;
+                    count++;
                 }
                 break;
             case PATH:
@@ -83,8 +95,6 @@ int parseString(char* string, char* username, char* password, char* hostname, ch
                 break;
             case PASSWORD:
                 if(string[count] == ':'){
-                    printf("Current Password: %s\n", password);
-                    printf("Current Password Count: %d\n", passwordCount);
                     count--;
                     state = USERNAME;
                 }
@@ -96,8 +106,6 @@ int parseString(char* string, char* username, char* password, char* hostname, ch
                 break;
             case USERNAME:
                 if(string[count] == '/'){
-                    printf("Current Username: %s\n", username);
-                    printf("Current Username Count: %d\n", usernameCount);
                     state = HOSTNAME;
                     count = hostnameIndex;
                 }
@@ -109,6 +117,15 @@ int parseString(char* string, char* username, char* password, char* hostname, ch
                 break;     
         }
     }
+
+
+    username[usernameCount] = '\0';
+    password[passwordCount] = '\0';
+    hostname[hostnameCount] = '\0';
+    path[pathCount] = '\0';
+
+    reverse(username);
+    reverse(password);
 
     //If no username or password is given, use anonymous
     if(usernameCount == 0 && passwordCount == 0){
@@ -125,6 +142,8 @@ int parseString(char* string, char* username, char* password, char* hostname, ch
 }
 
 int main(int argc, char *argv[]){
+    printf("Number of arguments: %d\n", argc);
+    printf("First argument: %s\n", argv[1]);
     if (argc < 2){
         printf("Usage: %s hostname\n", argv[0]);
         exit(1);
