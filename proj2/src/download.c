@@ -109,6 +109,14 @@ int parseString(char* string, char* username, char* password, char* hostname, ch
                 break;     
         }
     }
+
+    //If no username or password is given, use anonymous
+    if(usernameCount == 0 && passwordCount == 0){
+        printf("No username or password given\n");
+        username = "anonymous";
+        password = "anonymous";
+    }
+
     printf("Username: %s\n", username);
     printf("Password: %s\n", password);
     printf("Hostname: %s\n", hostname);
