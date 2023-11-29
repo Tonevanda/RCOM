@@ -174,7 +174,7 @@ int parseString(char string[], char username[], char password[], char hostname[]
 int connectToServer(char* ip, int port){
     int sockfd;
     struct sockaddr_in server_addr;
-    printf("IP: %s\n", ip);
+    
     /*server address handling*/
     bzero((char*)&server_addr,sizeof(server_addr));
     server_addr.sin_family = AF_INET;
