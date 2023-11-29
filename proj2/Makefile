@@ -21,5 +21,8 @@ run_test_2: $(TARGET)
 run_test_3: $(TARGET)
 	./$(TARGET) ftp://ftp.up.pt/
 
+run_test_4: $(TARGET)
+	./$(TARGET) ftp://ftp.up.pt/pub/CPAN/
+
 clean:
 	rm -f $(TARGET)
