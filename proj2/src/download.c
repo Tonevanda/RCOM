@@ -361,7 +361,7 @@ int main(int argc, char *argv[]){
     fwrite(file, 1, strlen(file), fp);
     fclose(fp);
 
-
+    // This closes the sockets
     closeSocket(dataSocket);
     closeSocket(controlSocket);
 
