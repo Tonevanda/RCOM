@@ -19,10 +19,10 @@ run_test_2: $(TARGET)
 	./$(TARGET) ftp://joao:123@host.name/url-path
 
 run_test_3: $(TARGET)
-	./$(TARGET) ftp://ftp.up.pt/
+	./$(TARGET) ftp://ftp.up.pt/pub/kodi/timestamp.txt
 
 run_test_4: $(TARGET)
-	./$(TARGET) ftp://ftp.up.pt/pub/CPAN/
+	./$(TARGET) ftp://joao:123@ftp.up.pt/pub/CPAN/
 
 clean:
 	rm -f $(TARGET)
