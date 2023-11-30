@@ -20,13 +20,6 @@ typedef enum{
     PATH        //path
 } State;
 
-typedef enum{
-    CONNECTION_COMMAND,
-    USERNAME_COMMAND,
-    PASSWORD_COMMAND,
-    PASSIVE_COMMAND
-} Command;
-
 // Reverses a string
 void reverse(char *str) {
     int i, j;
