@@ -282,6 +282,7 @@ int main(int argc, char *argv[]){
             case CONNECTION_COMMAND:
                 printf("Sending connect message: %s\n", connectMessage);
                 writeToServer(controlSocket, connectMessage);
+                sleep(1);
                 command = USERNAME_COMMAND;
                 readFromServer(controlSocket, connectResponse);
                 printf("Connect response: %s\n", connectResponse);
