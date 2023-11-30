@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+
 #define FTP_PORT 21
 #define PASSIVE_MODE "pasv"
 
@@ -269,67 +270,54 @@ int main(int argc, char *argv[]){
     char passiveMessage[100];
     sprintf(passiveMessage, "%s\n", PASSIVE_MODE);
 
-    bool STOP = false;
     char connectResponse[1000];
     char userResponse[1000];
     char passwordResponse[1000];
-    char passiveResponse[1000];
-    Command command = CONNECTION_COMMAND;
+    char passiveResponse[3000];
+
     char* statusCode;
 
-    while(!STOP){
-        switch(command){
-            case CONNECTION_COMMAND:
-                printf("Sending connect message: %s\n", connectMessage);
-                writeToServer(controlSocket, connectMessage);
-                sleep(1);
-                command = USERNAME_COMMAND;
-                readFromServer(controlSocket, connectResponse);
-                printf("Connect response: %s\n", connectResponse);
-                statusCode = getStatusCode(connectResponse);
-                if(strcmp(statusCode, "220") != 0){
-                    printf("Error connecting to server\n");
-                    exit(1);
-                }
-                break;
-            case USERNAME_COMMAND:
-                printf("Sending username message: %s\n", userMessage);
-                writeToServer(controlSocket, userMessage);
-                command = PASSWORD_COMMAND;
-                readFromServer(controlSocket, userResponse);
-                printf("User response: %s\n", userResponse);
-                statusCode = getStatusCode(userResponse);
-                if(strcmp(statusCode, "331") != 0){
-                    printf("Error sending username\n");
-                    exit(1);
-                }
-                break;
-            case PASSWORD_COMMAND:
-                printf("Sending password: %s\n", passwordMessage);
-                writeToServer(controlSocket, passwordMessage);
-                command = PASSIVE_COMMAND;
-                readFromServer(controlSocket, passwordResponse);
-                printf("Pass response: %s\n", passwordResponse);
-                statusCode = getStatusCode(passwordResponse);
-                if(strcmp(statusCode, "230") != 0){
-                    printf("Error sending password\n");
-                    exit(1);
-                }
-                break;
-            case PASSIVE_COMMAND:
-                printf("Sending passive message: %s\n", passiveMessage);
-                writeToServer(controlSocket, passiveMessage);
-                readFromServer(controlSocket, passiveResponse);
-                printf("Pasv response: %s\n", passiveResponse);
-                statusCode = getStatusCode(passiveResponse);
-                if(strcmp(statusCode, "227") != 0){
-                    printf("Error entering passive mode\n");
-                    exit(1);
-                }
-                STOP = true;
-                break;
-        }
+    printf("Sending connect message: %s\n", connectMessage);
+    writeToServer(controlSocket, connectMessage);
+    sleep(1); // This is needed to give the server time to respond
+    readFromServer(controlSocket, connectResponse);
+    printf("Connect response: %s\n", connectResponse);
+    statusCode = getStatusCode(connectResponse);
+    if(strcmp(statusCode, "220") != 0){
+        printf("Error connecting to server\n");
+        exit(1);
     }
+
+    printf("Sending username message: %s\n", userMessage);
+    writeToServer(controlSocket, userMessage);
+    readFromServer(controlSocket, userResponse);
+    printf("User response: %s\n", userResponse);
+    statusCode = getStatusCode(userResponse);
+    if(strcmp(statusCode, "331") != 0){
+        printf("Error sending username\n");
+        exit(1);
+    }
+
+    printf("Sending password: %s\n", passwordMessage);
+    writeToServer(controlSocket, passwordMessage);
+    readFromServer(controlSocket, passwordResponse);
+    printf("Pass response: %s\n", passwordResponse);
+    statusCode = getStatusCode(passwordResponse);
+    if(strcmp(statusCode, "230") != 0){
+        printf("Error sending password\n");
+        exit(1);
+    }
+
+    printf("Sending passive message: %s\n", passiveMessage);
+    writeToServer(controlSocket, passiveMessage);
+    readFromServer(controlSocket, passiveResponse);
+    printf("Pasv response: %s\n", passiveResponse);
+    statusCode = getStatusCode(passiveResponse);
+    if(strcmp(statusCode, "227") != 0){
+        printf("Error entering passive mode\n");
+        exit(1);
+    }
+
 
     char dataSocketIP[100];
     int dataSocketPort = 0;
