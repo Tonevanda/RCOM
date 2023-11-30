@@ -205,7 +205,7 @@ int writeToServer(int sockfd, char* message){
 
     bytes = write(sockfd, message, strlen(message));
     if (bytes > 0)
-        printf("%ld bytes written to %d socket\n", bytes, sockfd);
+        printf("%ld bytes written to socket %d\n", bytes, sockfd);
     else {
         perror("Error writing to socket");
         exit(-1);
@@ -219,7 +219,7 @@ int readFromServer(int sockfd, char* message){
 
     bytes = read(sockfd, message, 1000);
     if (bytes > 0)
-        printf("%ld bytes read from %d socket\n", bytes, sockfd);
+        printf("%ld bytes read from socket %d\n", bytes, sockfd);
     else {
         perror("Error reading from socket");
         exit(-1);
@@ -331,6 +331,7 @@ int main(int argc, char *argv[]){
 
     // This reads the file information from the data socket
     char file[10000];
+    printf("Reading from data socket\n");
     readFromServer(dataSocket, file);
 
     // This writes the file information to a local file
@@ -340,7 +341,9 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
+    printf("Writing to local file\n");
     fwrite(file, 1, strlen(file), fp);
+    printf("Finished  writing!\n");
     fclose(fp);
 
     // This closes the sockets
