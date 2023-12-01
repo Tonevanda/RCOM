@@ -6,7 +6,7 @@ A função de download será chamada com o seguinte formato:
 ./download ftp://[<user>:<password>@]<host>/<url-path>
 ```
 
-Primeiramente, temos de nos conectar ao servidor. Para isso, temos de descontruir a string passada como input e utilizar o parâmetro `host` (o user e password são opcionais, caso não sejam passados o user é anonymous e password é anonymous).
+Primeiramente, temos de nos conectar ao servidor. Para isso, temos de desconstruir a string passada como input e utilizar o parâmetro `host` (o user e password são opcionais, caso não sejam passados o user é anonymous e password é anonymous).
 
 ## Parsing da string 
 
@@ -23,9 +23,9 @@ O protocolo telnet têm 2 sockets diferentes:
     - Socket de controlo, que dá handle de autenticação e responde aos pedidos
     - Socket de dados, que será revelado caso o socket de controlo dê a permissão
 
-Com o nome do servidor, temos de abrir um socket com o seu IP. Para obtermos o IP chamamos a função do ficheiro `getip.c`, que vai devolver o IP do host pelo nome.
+Com o nome do servidor, temos de abrir um socket com o seu IP. Para obtermos o IP chamamos a função `getIP()`, que vai devolver o IP do host pelo nome.
 
-Agora que temos o IP do `host`, temos que criar uma socket com esse IP para nos ligarmos ao servidor. Para isso utilizamos a função do ficheiro `clientTCP.c`.
+Agora que temos o IP do `host`, temos que criar uma socket com esse IP para nos ligarmos ao servidor. Para isso utilizamos a função `connectToServer()`.
 
 Agora, estamos conectados ao servidor através de um socket de controlo e temos os valores necessários para lhe fazer um pedido:
 
@@ -41,7 +41,7 @@ Após isso, o socket de controlo irá responder com uma resposta de 6 bytes:
 
 Essa resposta de controlo representa o IP e porta onde estão armazenados os ficheiros desse servidor.<br>
 
-Temos, agora, de abrir um socket com esse IP e porta, que representa o socket de dados. Para isso, podemos utilizar a função do ficheiro `clientTCP.c`, que tinhamos utilizado anteriormente para abrir o socket de controlo.
+Temos, agora, de abrir um socket com esse IP e porta, que representa o socket de dados. Para isso, podemos utilizar a função `connectToServer()`, que tinhamos utilizado anteriormente para abrir o socket de controlo.
 
 ## Fazer download do ficheiro
 
