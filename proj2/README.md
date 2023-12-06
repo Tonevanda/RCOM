@@ -31,7 +31,7 @@ No Tux23 fazemos o mesmo, mas com este comando:
 ifconfig eth0 172.16.20.1/24
 ```
 
-Podemos fazer ping para confirmar se estão conectados da seguinte forma (no Tux23):
+Podemos fazer ping para confirmar se estão conectados da seguinte forma (no Tux24):
 
 ```shell
 ping 172.16.20.254
@@ -174,6 +174,14 @@ Agora configurar a outra interface do Tux24 para acomodar a ligação ao Tux22:
 ifconfig eth1 172.16.21.253/24
 ```
 
+Depois, para dar enable a IP forwarding e disable ICMP echo-ignore-broadcast:
+
+```shell
+sysctl net.ipv4.ip_forward=1
+sysctl net.ipv4.icmp_echo_ignore_broadcasts=0
+```
+
+
 Precisamos, também, de adicionar uma rota entre o Tux22 e o Tux23.
 
 No Tux 22 fazemos o seguinte:
@@ -194,3 +202,45 @@ route add -net 172.16.21.0/24 gw 172.16.20.254
 ## EXP 4
 
 Primeiramente, temos de conectar o eth1 do **Router Console** ao **P2.1** e conectar o eth2 do **Route Console** a um port na **Switch**. Depois, trocamos o cabo que está ligado ao T4, que inicialmente estava conectado à **Switch**, para termos acesso à **Switch** e dar setup das rotas e bridges, e colocamos no **Route MT**, para termos acesso ao **RC**.
+
+Temos que dar reset ao router da seguinte forma:
+
+```shell
+system reset-configuration
+```
+
+Depois temos que ir para o **GTKTerm** configurar o ip do Router da seguinte forma:
+
+```shell
+ip address add address=172.16.1.29/24 interface=ether1
+ip address add address=172.16.21.254/24 interface=ether2
+```
+
+Após isso, temos que adicionar novas **routes**
+
+No Tux23:
+
+```shell
+route add default gw 172.16.20.254
+route add -net 172.16.20.0/24 gw 172.16.21.253
+```
+
+No Tux24:
+
+```shell
+route add default gw 172.16.21.254
+```
+
+Depois no Tux22:
+
+```shell
+route add default gw 172.16.21.254
+route add -net 
+```
+
+Agora no **GTKTerm** do Tux24 fazemos:
+
+```shell
+ip route add dst-address=172.16.20.0/24 gateway=172.16.21.253
+```
+
