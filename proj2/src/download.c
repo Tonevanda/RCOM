@@ -12,6 +12,11 @@
 #define FTP_PORT 21
 #define PASSIVE_MODE "pasv"
 
+#define FTP_DEFAULT_USER "anonymous"
+#define FTP_DEFAULT_PASSWORD "anonymous"
+#define NETLAB_DEFAULT_USER "anonymous"
+#define NETLAB_DEFAULT_PASSWORD "password"
+
 typedef enum{
     INITIAL,    //ftp://
     USERNAME,   //username
@@ -67,13 +72,14 @@ int parsePassiveResponse(const char* response, char* ip, int* dataSocketPort) {
 }
 
 // Parses the string given by the user
-int parseString(char string[], char username[], char password[], char hostname[], char path[]){
+int parseString(char string[], char username[], char password[], char hostname[], char path[], char filename[]){
     State state = INITIAL;
     int count = 0;
     int usernameCount = 0;
     int passwordCount = 0;
     int hostnameCount = 0;
     int pathCount = 0;
+    int filenameCount = 0;
     int hostnameIndex = 0;
     int length = 0;
 
@@ -113,6 +119,14 @@ int parseString(char string[], char username[], char password[], char hostname[]
                 break;
             case PATH:
                 path[pathCount] = string[count];
+                if(string[count] == '/'){
+                    filenameCount = 0;
+                    memset(filename, 0, filenameCount); //Reset the filename
+                }
+                else{
+                    filename[filenameCount] = string[count];
+                    filenameCount++;
+                }
                 count++;
                 pathCount++;
                 break;
@@ -153,14 +167,21 @@ int parseString(char string[], char username[], char password[], char hostname[]
     //If no username or password is given, use anonymous
     if(usernameCount == 0 && passwordCount == 0){
         printf("No username or password given\n");
-        sprintf(username, "anonymous");
-        sprintf(password, "anonymous");
+        if(strcmp(hostname, "ftp.up.pt") == 0){
+            sprintf(username, FTP_DEFAULT_USER);
+            sprintf(password, FTP_DEFAULT_PASSWORD);
+        }
+        else if(strcmp(hostname, "netlab1.fe.up.pt") == 0){
+            sprintf(username, NETLAB_DEFAULT_USER);
+            sprintf(password, NETLAB_DEFAULT_PASSWORD);
+        }
     }
 
     printf("Username: %s\n", username);
     printf("Password: %s\n", password);
     printf("Hostname: %s\n", hostname);
     printf("Path: %s\n", path);
+    printf("Filename: %s\n", filename);
     return 0;
 }
 
@@ -239,8 +260,9 @@ int main(int argc, char *argv[]){
     char password[100];
     char hostname[100];
     char path[100];
+    char filename[100];
 
-    if(parseString(argv[1], username, password, hostname, path) != 0){
+    if(parseString(argv[1], username, password, hostname, path, filename) != 0){
         printf("Error parsing string\n");
         exit(1);
     }
@@ -335,7 +357,7 @@ int main(int argc, char *argv[]){
     readFromServer(dataSocket, file);
 
     // This writes the file information to a local file
-    FILE *fp = fopen("file.txt", "wb");
+    FILE *fp = fopen(filename, "wb");
     if(fp == NULL){
         printf("Error opening file\n");
         exit(1);
