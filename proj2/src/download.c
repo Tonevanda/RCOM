@@ -231,7 +231,7 @@ int main(int argc, char *argv[]){
     printf("Number of arguments: %d\n", argc);
     printf("First argument: %s\n", argv[1]);
     if (argc < 2){
-        printf("Usage: %s hostname\n", argv[0]);
+        printf("Usage: ./download ftp://[<user>:<password>@]<host>/<url-path>\n");
         exit(1);
     }
 
