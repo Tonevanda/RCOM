@@ -12,10 +12,8 @@
 #define FTP_PORT 21
 #define PASSIVE_MODE "pasv"
 
-#define FTP_DEFAULT_USER "anonymous"
-#define FTP_DEFAULT_PASSWORD "anonymous"
-#define NETLAB_DEFAULT_USER "anonymous"
-#define NETLAB_DEFAULT_PASSWORD "password"
+#define DEFAULT_USER "anonymous"
+#define DEFAULT_PASSWORD "anonymous"
 
 typedef enum{
     INITIAL,    //ftp://
@@ -167,14 +165,8 @@ int parseString(char string[], char username[], char password[], char hostname[]
     //If no username or password is given, use anonymous
     if(usernameCount == 0 && passwordCount == 0){
         printf("No username or password given\n");
-        if(strcmp(hostname, "ftp.up.pt") == 0){
-            sprintf(username, FTP_DEFAULT_USER);
-            sprintf(password, FTP_DEFAULT_PASSWORD);
-        }
-        else if(strcmp(hostname, "netlab1.fe.up.pt") == 0){
-            sprintf(username, NETLAB_DEFAULT_USER);
-            sprintf(password, NETLAB_DEFAULT_PASSWORD);
-        }
+        sprintf(username, DEFAULT_USER);
+        sprintf(password, DEFAULT_PASSWORD);
     }
 
     printf("Username: %s\n", username);
@@ -351,10 +343,6 @@ int main(int argc, char *argv[]){
     sprintf(pathMessage, "retr %s\n", path);
     writeToServer(controlSocket, pathMessage);
 
-    // This reads the file information from the data socket
-    char file[10000];
-    printf("Reading from data socket\n");
-    readFromServer(dataSocket, file);
 
     // This writes the file information to a local file
     FILE *fp = fopen(filename, "wb");
@@ -363,10 +351,18 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    printf("Writing to local file\n");
-    fwrite(file, 1, strlen(file), fp);
-    printf("Finished  writing!\n");
+    // This reads the file information from the data socket and writes it to the local file
+    char file[1000];
+    int bytes;
+    printf("Downloading file...\n");
+    while((bytes = read(dataSocket, file, 1000)) > 0){
+        if(fwrite(file, bytes, 1, fp) < 0){
+            printf("Error writing to file\n");
+            exit(1);
+        }
+    }
     fclose(fp);
+    printf("Finished  downloading!\n");
 
     // This closes the sockets
     closeSocket(dataSocket);
