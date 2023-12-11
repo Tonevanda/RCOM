@@ -1,34 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <stdbool.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <sys/time.h>
-
-
-#define FTP_PORT 21
-#define PASSIVE_MODE "pasv"
-
-#define DEFAULT_USER "anonymous"
-#define DEFAULT_PASSWORD "anonymous"
+#include "download.h"
 
 struct timeval start, end;
 long seconds, useconds;
 double mtime;
 
-typedef enum{
-    INITIAL,    //ftp://
-    USERNAME,   //username
-    PASSWORD,   //password
-    HOSTNAME,   //hostname
-    PATH        //path
-} State;
-
-// Reverses a string
 void reverse(char *str) {
     int i, j;
     char temp;
@@ -46,7 +21,6 @@ char* getStatusCode(const char* str) {
     return result;
 }
 
-// Gets the IP of a hostname
 char* getIP(char* hostname){
     struct hostent *h;
 
@@ -63,7 +37,6 @@ char* getIP(char* hostname){
     return ip;
 }
 
-// Returns the IP and port of the data socket
 int parsePassiveResponse(const char* response, char* ip, int* dataSocketPort) {
     int values[6];
     sscanf(response, "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)", 
@@ -74,7 +47,6 @@ int parsePassiveResponse(const char* response, char* ip, int* dataSocketPort) {
     return 0;
 }
 
-// Parses the string given by the user
 int parseString(char string[], char username[], char password[], char hostname[], char path[], char filename[]){
     State state = INITIAL;
     int count = 0;
@@ -182,7 +154,6 @@ int parseString(char string[], char username[], char password[], char hostname[]
     return 0;
 }
 
-// Opens a socket and connects to the server
 int connectToServer(char* ip, int port){
     int sockfd;
     struct sockaddr_in server_addr;
@@ -207,16 +178,18 @@ int connectToServer(char* ip, int port){
     return sockfd;
 }
 
-// Closes a socket
-int closeSocket(int sockfd){
-    if (close(sockfd)<0) {
-        perror("Error closing socket");
+int closeSockets(int controlSocket, int dataSocket){
+    if (close(controlSocket)<0) {
+        perror("Error closing control socket");
+        exit(-1);
+    }
+    if (close(dataSocket)<0) {
+        perror("Error closing data socket");
         exit(-1);
     }
     return 0;
 }
 
-// Writes a message to the server
 int writeToServer(int sockfd, char* message){
     
     size_t bytes;
@@ -250,6 +223,33 @@ void printProgressIndicator(int chunksReceived) {
         printf(".");
         fflush(stdout);
     }
+}
+
+int downloadFile(int dataSocket, char *filename){   
+    
+    FILE *fp = fopen(filename, "wb");
+    if(fp == NULL){
+        printf("Error opening file\n");
+        exit(1);
+    }
+
+    char file[1000];
+    int bytes;
+    int chunksReceived = 0;
+    int totalBytes = 0;
+
+    while((bytes = read(dataSocket, file, 1000)) > 0){
+        chunksReceived++;
+        totalBytes += bytes;
+        printProgressIndicator(chunksReceived);
+        if(fwrite(file, bytes, 1, fp) < 0){
+            printf("Error writing to file\n");
+            exit(1);
+        }
+    }
+    printf("\n");
+    fclose(fp);
+    return totalBytes;
 }
 
 int main(int argc, char *argv[]){
@@ -293,7 +293,7 @@ int main(int argc, char *argv[]){
 
     char* statusCode;
 
-    sleep(1);
+    //sleep(1);
     readFromServer(controlSocket, connectResponse);
     printf("Connect response: %s\n", connectResponse);
     statusCode = getStatusCode(connectResponse);
@@ -345,41 +345,22 @@ int main(int argc, char *argv[]){
     sprintf(pathMessage, "retr %s\n", path);
     writeToServer(controlSocket, pathMessage);
 
-
-    // This writes the file information to a local file
-    FILE *fp = fopen(filename, "wb");
-    if(fp == NULL){
-        printf("Error opening file\n");
-        exit(1);
-    }
-
-    // This reads the file information from the data socket and writes it to the local file
-    char file[1000];
-    int bytes;
-    int chunksReceived = 0;
     printf("Downloading file...\n");
     gettimeofday(&start, NULL);
-    while((bytes = read(dataSocket, file, 1000)) > 0){
-        chunksReceived++;
-        printProgressIndicator(chunksReceived);
-        if(fwrite(file, bytes, 1, fp) < 0){
-            printf("Error writing to file\n");
-            exit(1);
-        }
-    }
-    printf("\n");
-    fclose(fp);
+    
+    
+    int totalBytes = downloadFile(dataSocket, filename);
+
     gettimeofday(&end, NULL);
     printf("Finished  downloading!\n");
     seconds = end.tv_sec - start.tv_sec;
     useconds = end.tv_usec - start.tv_usec;
-
     mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
     printf("Downloading time: %f seconds\n", mtime/1000.0);
+    printf("Download speed: %f MB/s\n", (totalBytes / 1048576.0) / (mtime / 1000.0));
 
     // This closes the sockets
-    closeSocket(dataSocket);
-    closeSocket(controlSocket);
+    closeSockets(controlSocket, dataSocket);
 
     return 0;
 }
