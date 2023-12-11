@@ -245,6 +245,13 @@ int readFromServer(int sockfd, char* message){
     return 0;
 }
 
+void printProgressIndicator(int chunksReceived) {
+    if (chunksReceived % 1000 == 0){
+        printf(".");
+        fflush(stdout);
+    }
+}
+
 int main(int argc, char *argv[]){
     printf("Number of arguments: %d\n", argc);
     printf("First argument: %s\n", argv[1]);
@@ -349,14 +356,18 @@ int main(int argc, char *argv[]){
     // This reads the file information from the data socket and writes it to the local file
     char file[1000];
     int bytes;
+    int chunksReceived = 0;
     printf("Downloading file...\n");
     gettimeofday(&start, NULL);
     while((bytes = read(dataSocket, file, 1000)) > 0){
+        chunksReceived++;
+        printProgressIndicator(chunksReceived);
         if(fwrite(file, bytes, 1, fp) < 0){
             printf("Error writing to file\n");
             exit(1);
         }
     }
+    printf("\n");
     fclose(fp);
     gettimeofday(&end, NULL);
     printf("Finished  downloading!\n");
