@@ -119,11 +119,20 @@ int writeToServer(int sockfd, char* message);
 int readFromServer(int sockfd, char* message);
 
 /**
- * @brief Prints a progress indicator for user feedback
+ * @brief Prints the progress bar of the download
  * 
- * @param chunksReceived Number of chunks received
+ * @param totalBytes Total number of bytes read
+ * @param fileSize Size of the file being downloaded
  */
-void printProgressIndicator(int chunksReceived);
+void printProgressBar(long totalBytes, long fileSize);
+
+/**
+ * @brief Prints the download information, such as the download speed and the total time
+ * 
+ * @param start Start time of the download
+ * @param totalBytes Total number of bytes read
+ */
+void printDownloadInformation(struct timeval start, int totalBytes);
 
 /**
  * @brief Reads the file from the socket and writes to a local file
@@ -132,4 +141,4 @@ void printProgressIndicator(int chunksReceived);
  * @param filename Name of the local file to create and write to
  * @return int total number of bytes read
  */
-int downloadFile(int dataSocket, char* filename, long fileSize);
+int writeToFile(int dataSocket, char* filename, long fileSize);
