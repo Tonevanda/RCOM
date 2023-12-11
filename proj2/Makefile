@@ -36,3 +36,4 @@ run_test_pic2: $(TARGET)
 clean:
 	rm -f $(TARGET)
 	rm -f *.txt *.jpg *.png *.mp4 *.iso
+	clear
