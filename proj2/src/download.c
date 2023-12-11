@@ -1,8 +1,5 @@
 #include "download.h"
 
-struct timeval start, end;
-long seconds, useconds;
-double mtime;
 
 void reverse(char *str) {
     int i, j;
@@ -148,7 +145,6 @@ int parseString(char string[], char username[], char password[], char hostname[]
 
     printf("Username: %s\n", username);
     printf("Password: %s\n", password);
-    printf("Hostname: %s\n", hostname);
     printf("Path: %s\n", path);
     printf("Filename: %s\n", filename);
     return 0;
@@ -195,13 +191,10 @@ int writeToServer(int sockfd, char* message){
     size_t bytes;
 
     bytes = write(sockfd, message, strlen(message));
-    if (bytes > 0)
-        printf("%ld bytes written to socket %d\n", bytes, sockfd);
-    else {
+    if (bytes <= 0){
         perror("Error writing to socket");
         exit(-1);
     }
-
     return 0;
 }
 
@@ -209,23 +202,49 @@ int readFromServer(int sockfd, char* message){
     size_t bytes;
 
     bytes = read(sockfd, message, 1000);
-    if (bytes > 0)
-        printf("%ld bytes read from socket %d\n", bytes, sockfd);
-    else {
+    if (bytes <= 0){
         perror("Error reading from socket");
         exit(-1);
     }
+    message[bytes] = '\0';
     return 0;
 }
 
-void printProgressIndicator(int chunksReceived) {
-    if (chunksReceived % 1000 == 0){
-        printf(".");
-        fflush(stdout);
+long getFileSize(char* response) {
+    long size;
+    char* start = strchr(response, '(');
+    if (start != NULL && sscanf(start, "(%ld bytes)", &size) == 1) {
+        return size;
+    } else {
+        fprintf(stderr, "Could not parse file size from response\n");
+        return -1;
     }
 }
 
-int downloadFile(int dataSocket, char *filename){   
+char* getServerResponse(int sockfd, char* message, char* response){
+    printf("Sending message: %s\n", message);
+    writeToServer(sockfd, message);
+    readFromServer(sockfd, response);
+    printf("Server response: %s\n\n", response);
+    return getStatusCode(response);
+}
+
+void printProgressBar(long totalBytes, long fileSize) {
+    int percentage = (int)((100.0 * totalBytes) / fileSize);
+
+    printf("\r[");
+    for (int i = 0; i < 100; i += 2) {
+        if (i < percentage) {
+            printf("#");
+        } else {
+            printf(" ");
+        }
+    }
+    printf("] %d%%", percentage);
+    fflush(stdout);
+}
+
+int downloadFile(int dataSocket, char *filename, long fileSize){   
     
     FILE *fp = fopen(filename, "wb");
     if(fp == NULL){
@@ -235,24 +254,40 @@ int downloadFile(int dataSocket, char *filename){
 
     char file[1000];
     int bytes;
-    int chunksReceived = 0;
     int totalBytes = 0;
 
     while((bytes = read(dataSocket, file, 1000)) > 0){
-        chunksReceived++;
         totalBytes += bytes;
-        printProgressIndicator(chunksReceived);
         if(fwrite(file, bytes, 1, fp) < 0){
             printf("Error writing to file\n");
             exit(1);
         }
+        printProgressBar(totalBytes, fileSize);
     }
     printf("\n");
     fclose(fp);
     return totalBytes;
 }
 
+void printDownloadInformation(struct timeval start, int totalBytes) {
+    struct timeval end;
+    long seconds, useconds;    
+    double mtime;
+
+    gettimeofday(&end, NULL);
+    printf("\nFinished downloading!\n\n");
+
+    seconds = end.tv_sec - start.tv_sec;
+    useconds = end.tv_usec - start.tv_usec;
+    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+
+    printf("Downloading time: %f seconds\n", mtime/1000.0);
+    printf("Download speed: %f MB/s\n", (totalBytes / 1048576.0) / (mtime / 1000.0));
+}
+
+
 int main(int argc, char *argv[]){
+    printf("\n--------- INPUT INFORMATION ---------\n\n");
     printf("Number of arguments: %d\n", argc);
     printf("First argument: %s\n", argv[1]);
     if (argc < 2){
@@ -271,94 +306,86 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    char* ip;
-
     //Retrieves the IP of the hostname
+    char* ip;
     ip = getIP(hostname);
-    
+
     // This opens a control socket and connects to the server
     int controlSocket = connectToServer(ip, FTP_PORT);
+    printf("\n-------------------------------------\n\n");
 
-    char userMessage[100];
-    sprintf(userMessage, "USER %s\n", username);
-    char passwordMessage[100];
-    sprintf(passwordMessage, "PASS %s\n", password);
-    char passiveMessage[100];
-    sprintf(passiveMessage, "%s\n", PASSIVE_MODE);
-
-    char connectResponse[1000];
-    char userResponse[1000];
-    char passwordResponse[1000];
-    char passiveResponse[3000];
-
+    char message[100];
+    char response[1000];
     char* statusCode;
 
-    //sleep(1);
-    readFromServer(controlSocket, connectResponse);
-    printf("Connect response: %s\n", connectResponse);
-    statusCode = getStatusCode(connectResponse);
-    if(strcmp(statusCode, "220") != 0){
+    readFromServer(controlSocket, response);
+    printf("Connect response: %s\n\n", response);
+    statusCode = getStatusCode(response);
+
+    if(strcmp(statusCode, TELNET_RESPONSE) != 0){
         printf("Error connecting to server\n");
         exit(1);
     }
 
-    printf("Sending username message: %s\n", userMessage);
-    writeToServer(controlSocket, userMessage);
-    readFromServer(controlSocket, userResponse);
-    printf("User response: %s\n", userResponse);
-    statusCode = getStatusCode(userResponse);
-    if(strcmp(statusCode, "331") != 0){
+    memset(response, 0, 1000);
+    memset(message, 0, 100);
+    sprintf(message, USER_MESSAGE, username);
+    if(strcmp(getServerResponse(controlSocket, message, response), USER_RESPONSE) != 0){
         printf("Error sending username\n");
         exit(1);
     }
 
-    printf("Sending password: %s\n", passwordMessage);
-    writeToServer(controlSocket, passwordMessage);
-    readFromServer(controlSocket, passwordResponse);
-    printf("Pass response: %s\n", passwordResponse);
-    statusCode = getStatusCode(passwordResponse);
-    if(strcmp(statusCode, "230") != 0){
+    memset(response, 0, 1000);
+    memset(message, 0, 100);
+    sprintf(message, PASS_MESSAGE, password);
+    if(strcmp(getServerResponse(controlSocket, message, response), PASS_RESPONSE) != 0){
         printf("Error sending password\n");
         exit(1);
     }
 
-    printf("Sending passive message: %s\n", passiveMessage);
-    writeToServer(controlSocket, passiveMessage);
-    readFromServer(controlSocket, passiveResponse);
-    printf("Pasv response: %s\n", passiveResponse);
-    statusCode = getStatusCode(passiveResponse);
-    if(strcmp(statusCode, "227") != 0){
-        printf("Error entering passive mode\n");
+    memset(response, 0, 1000);
+    memset(message, 0, 100);
+    sprintf(message, PASSIVE_MODE);
+    if(strcmp(getServerResponse(controlSocket, message, response), PASV_RESPONSE) != 0){
+        printf("Error sending passive mode\n");
         exit(1);
     }
 
-
     char dataSocketIP[100];
     int dataSocketPort = 0;
-    parsePassiveResponse(passiveResponse, dataSocketIP, &dataSocketPort);
+    parsePassiveResponse(response, dataSocketIP, &dataSocketPort);
 
     // This opens the data socket
     int dataSocket = connectToServer(dataSocketIP, dataSocketPort);
 
     // This writes the message to retrieve the file
-    char* pathMessage = malloc(100);
-    sprintf(pathMessage, "retr %s\n", path);
-    writeToServer(controlSocket, pathMessage);
+    memset(response, 0, 1000);
+    memset(message, 0, 100);
+    sprintf(message, RETRIEVE_MESSAGE, path);
+    if(strcmp(getServerResponse(controlSocket, message, response), RETR_RESPONSE) != 0){
+        printf("Error sending retrieve message\n");
+        exit(1);
+    }
 
-    printf("Downloading file...\n");
+    long fileSize = getFileSize(response);
+    struct timeval start;
     gettimeofday(&start, NULL);
-    
-    
-    int totalBytes = downloadFile(dataSocket, filename);
+    printf("Downloading file...\n");
 
-    gettimeofday(&end, NULL);
-    printf("Finished  downloading!\n");
-    seconds = end.tv_sec - start.tv_sec;
-    useconds = end.tv_usec - start.tv_usec;
-    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
-    printf("Downloading time: %f seconds\n", mtime/1000.0);
-    printf("Download speed: %f MB/s\n", (totalBytes / 1048576.0) / (mtime / 1000.0));
+    int totalBytes = downloadFile(dataSocket, filename, fileSize);
 
+    printDownloadInformation(start, totalBytes);
+
+    memset(response, 0, 1000);
+    readFromServer(controlSocket, response);
+    printf("\nServer response: %s", response);
+    statusCode = getStatusCode(response);
+
+    if(strcmp(statusCode, TRANSFER_COMPLETE) != 0){
+        printf("Error transfering file\n");
+        exit(1);
+    }
+    
     // This closes the sockets
     closeSockets(controlSocket, dataSocket);
 

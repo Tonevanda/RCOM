@@ -11,7 +11,19 @@
 
 
 #define FTP_PORT 21
-#define PASSIVE_MODE "pasv"
+
+#define USER_MESSAGE "USER %s\r\n"
+#define PASS_MESSAGE "PASS %s\r\n"
+#define PASSIVE_MODE "PASV \r\n"
+#define RETRIEVE_MESSAGE "retr %s\r\n"
+#define QUIT_MESSAGE "QUIT \r\n"
+
+#define TELNET_RESPONSE "220"
+#define USER_RESPONSE "331"
+#define PASS_RESPONSE "230"
+#define PASV_RESPONSE "227"
+#define RETR_RESPONSE "150"
+#define TRANSFER_COMPLETE "226"
 
 #define DEFAULT_USER "anonymous"
 #define DEFAULT_PASSWORD "anonymous"
@@ -119,4 +131,4 @@ void printProgressIndicator(int chunksReceived);
  * @param filename Name of the local file to create and write to
  * @return int total number of bytes read
  */
-int downloadFile(int dataSocket, char* filename);
+int downloadFile(int dataSocket, char* filename, long fileSize);
