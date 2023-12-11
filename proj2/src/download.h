@@ -11,6 +11,7 @@
 
 
 #define FTP_PORT 21
+#define MAX_STRING_SIZE 108
 
 #define USER_MESSAGE "USER %s\r\n"
 #define PASS_MESSAGE "PASS %s\r\n"

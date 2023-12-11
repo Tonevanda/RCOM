@@ -132,6 +132,7 @@ int parseString(char string[], char username[], char password[], char hostname[]
     password[passwordCount] = '\0';
     hostname[hostnameCount] = '\0';
     path[pathCount] = '\0';
+    filename[filenameCount] = '\0';
 
     reverse(username);
     reverse(password);
@@ -314,7 +315,7 @@ int main(int argc, char *argv[]){
     int controlSocket = connectToServer(ip, FTP_PORT);
     printf("\n-------------------------------------\n\n");
 
-    char message[100];
+    char message[MAX_STRING_SIZE];
     char response[1000];
     char* statusCode;
 
@@ -329,7 +330,7 @@ int main(int argc, char *argv[]){
 
     memset(response, 0, 1000);
     memset(message, 0, 100);
-    sprintf(message, USER_MESSAGE, username);
+    snprintf(message, MAX_STRING_SIZE, USER_MESSAGE, username);
     if(strcmp(getServerResponse(controlSocket, message, response), USER_RESPONSE) != 0){
         printf("Error sending username\n");
         exit(1);
@@ -337,7 +338,7 @@ int main(int argc, char *argv[]){
 
     memset(response, 0, 1000);
     memset(message, 0, 100);
-    sprintf(message, PASS_MESSAGE, password);
+    snprintf(message, MAX_STRING_SIZE, PASS_MESSAGE, password);
     if(strcmp(getServerResponse(controlSocket, message, response), PASS_RESPONSE) != 0){
         printf("Error sending password\n");
         exit(1);
@@ -361,7 +362,7 @@ int main(int argc, char *argv[]){
     // This writes the message to retrieve the file
     memset(response, 0, 1000);
     memset(message, 0, 100);
-    sprintf(message, RETRIEVE_MESSAGE, path);
+    snprintf(message, MAX_STRING_SIZE, RETRIEVE_MESSAGE, path);
     if(strcmp(getServerResponse(controlSocket, message, response), RETR_RESPONSE) != 0){
         printf("Error sending retrieve message\n");
         exit(1);
