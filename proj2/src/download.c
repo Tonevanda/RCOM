@@ -267,9 +267,6 @@ int main(int argc, char *argv[]){
     // This opens a control socket and connects to the server
     int controlSocket = connectToServer(ip, FTP_PORT);
 
-    // This creates the strings to send to the server
-    char connectMessage[100];
-    sprintf(connectMessage, "telnet %s %d\n", hostname, FTP_PORT);
     char userMessage[100];
     sprintf(userMessage, "USER %s\n", username);
     char passwordMessage[100];
@@ -284,9 +281,7 @@ int main(int argc, char *argv[]){
 
     char* statusCode;
 
-    printf("Sending connect message: %s\n", connectMessage);
-    writeToServer(controlSocket, connectMessage);
-    sleep(1); // This is needed to give the server time to respond
+    sleep(1);
     readFromServer(controlSocket, connectResponse);
     printf("Connect response: %s\n", connectResponse);
     statusCode = getStatusCode(connectResponse);
@@ -332,11 +327,6 @@ int main(int argc, char *argv[]){
 
     // This opens the data socket
     int dataSocket = connectToServer(dataSocketIP, dataSocketPort);
-
-    // This writes the message to connect to the data socket
-    char dataConnectMessage[100];
-    sprintf(dataConnectMessage, "telnet %s %d\n", hostname, dataSocketPort);
-    writeToServer(dataSocket, dataConnectMessage);
 
     // This writes the message to retrieve the file
     char* pathMessage = malloc(100);
