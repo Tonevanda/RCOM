@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 
 #define FTP_PORT 21
@@ -14,6 +15,10 @@
 
 #define DEFAULT_USER "anonymous"
 #define DEFAULT_PASSWORD "anonymous"
+
+struct timeval start, end;
+long seconds, useconds;
+double mtime;
 
 typedef enum{
     INITIAL,    //ftp://
@@ -345,6 +350,7 @@ int main(int argc, char *argv[]){
     char file[1000];
     int bytes;
     printf("Downloading file...\n");
+    gettimeofday(&start, NULL);
     while((bytes = read(dataSocket, file, 1000)) > 0){
         if(fwrite(file, bytes, 1, fp) < 0){
             printf("Error writing to file\n");
@@ -352,7 +358,13 @@ int main(int argc, char *argv[]){
         }
     }
     fclose(fp);
+    gettimeofday(&end, NULL);
     printf("Finished  downloading!\n");
+    seconds = end.tv_sec - start.tv_sec;
+    useconds = end.tv_usec - start.tv_usec;
+
+    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+    printf("Downloading time: %f seconds\n", mtime/1000.0);
 
     // This closes the sockets
     closeSocket(dataSocket);
