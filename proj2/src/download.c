@@ -245,7 +245,23 @@ void printProgressBar(long totalBytes, long fileSize) {
     fflush(stdout);
 }
 
-int downloadFile(int dataSocket, char *filename, long fileSize){   
+void printDownloadInformation(struct timeval start, int totalBytes) {
+    struct timeval end;
+    long seconds, useconds;    
+    double mtime;
+
+    gettimeofday(&end, NULL);
+    printf("\nFinished downloading!\n\n");
+
+    seconds = end.tv_sec - start.tv_sec;
+    useconds = end.tv_usec - start.tv_usec;
+    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+
+    printf("Downloading time: %f seconds\n", mtime/1000.0);
+    printf("Download speed: %f MB/s\n", (totalBytes / 1048576.0) / (mtime / 1000.0));
+}
+
+int writeToFile(int dataSocket, char *filename, long fileSize){   
     
     FILE *fp = fopen(filename, "wb");
     if(fp == NULL){
@@ -270,24 +286,8 @@ int downloadFile(int dataSocket, char *filename, long fileSize){
     return totalBytes;
 }
 
-void printDownloadInformation(struct timeval start, int totalBytes) {
-    struct timeval end;
-    long seconds, useconds;    
-    double mtime;
-
-    gettimeofday(&end, NULL);
-    printf("\nFinished downloading!\n\n");
-
-    seconds = end.tv_sec - start.tv_sec;
-    useconds = end.tv_usec - start.tv_usec;
-    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
-
-    printf("Downloading time: %f seconds\n", mtime/1000.0);
-    printf("Download speed: %f MB/s\n", (totalBytes / 1048576.0) / (mtime / 1000.0));
-}
-
-
 int main(int argc, char *argv[]){
+
     printf("\n--------- INPUT INFORMATION ---------\n\n");
     printf("Number of arguments: %d\n", argc);
     printf("First argument: %s\n", argv[1]);
@@ -319,6 +319,7 @@ int main(int argc, char *argv[]){
     char response[1000];
     char* statusCode;
 
+    sleep(1);
     readFromServer(controlSocket, response);
     printf("Connect response: %s\n\n", response);
     statusCode = getStatusCode(response);
@@ -329,7 +330,7 @@ int main(int argc, char *argv[]){
     }
 
     memset(response, 0, 1000);
-    memset(message, 0, 100);
+    memset(message, 0, MAX_STRING_SIZE);
     snprintf(message, MAX_STRING_SIZE, USER_MESSAGE, username);
     if(strcmp(getServerResponse(controlSocket, message, response), USER_RESPONSE) != 0){
         printf("Error sending username\n");
@@ -345,14 +346,14 @@ int main(int argc, char *argv[]){
     }
 
     memset(response, 0, 1000);
-    memset(message, 0, 100);
+    memset(message, 0, MAX_STRING_SIZE);
     sprintf(message, PASSIVE_MODE);
     if(strcmp(getServerResponse(controlSocket, message, response), PASV_RESPONSE) != 0){
         printf("Error sending passive mode\n");
         exit(1);
     }
 
-    char dataSocketIP[100];
+    char dataSocketIP[16];
     int dataSocketPort = 0;
     parsePassiveResponse(response, dataSocketIP, &dataSocketPort);
 
@@ -369,24 +370,26 @@ int main(int argc, char *argv[]){
     }
 
     long fileSize = getFileSize(response);
+
     struct timeval start;
     gettimeofday(&start, NULL);
     printf("Downloading file...\n");
 
-    int totalBytes = downloadFile(dataSocket, filename, fileSize);
+    //This reads the file from the data socket and writes it to a local file
+    int totalBytes = writeToFile(dataSocket, filename, fileSize);
 
     printDownloadInformation(start, totalBytes);
 
+    // This reads the control socket to check if the transfer was complete
     memset(response, 0, 1000);
     readFromServer(controlSocket, response);
     printf("\nServer response: %s", response);
     statusCode = getStatusCode(response);
-
     if(strcmp(statusCode, TRANSFER_COMPLETE) != 0){
         printf("Error transfering file\n");
         exit(1);
     }
-    
+
     // This closes the sockets
     closeSockets(controlSocket, dataSocket);
 
