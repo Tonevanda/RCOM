@@ -34,7 +34,7 @@ ifconfig eth0 172.16.20.1/24
 Podemos fazer ping para confirmar se estão conectados da seguinte forma (no Tux24):
 
 ```shell
-ping 172.16.20.254
+ping 172.16.20.1
 ```
 
 Para eliminar as entries na table ARP, para forçar o PC (Tux23, neste caso) a fazer o pedido em broadcast para saber o MAC do PC com quem quer comunicar (Tux24, neste caso), fazemos o seguinte comando:
