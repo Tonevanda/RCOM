@@ -222,7 +222,6 @@ No Tux23:
 
 ```shell
 route add default gw 172.16.20.254
-route add -net 172.16.20.0/24 gw 172.16.21.253
 ```
 
 No Tux24:
@@ -235,12 +234,12 @@ Depois no Tux22:
 
 ```shell
 route add default gw 172.16.21.254
-route add -net 
 ```
 
 Agora no **GTKTerm** do Tux24 fazemos:
 
 ```shell
-ip route add dst-address=172.16.20.0/24 gateway=172.16.21.253
+ip route add dst-address=172.16.20.0/24 gateway=172.16.21.253 
+ip route add dst-address=0.0.0.0/0 gateway=172.16.1.254
 ```
 
